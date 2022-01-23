@@ -36,14 +36,18 @@ func (rs *ReceiptService) FindAllReceipts(r *[]model.ReceiptResponse) {
 	}
 }
 
-func (rs *ReceiptService) FindReceipt(r *model.ReceiptResponse, id uuid.UUID) {
+func (rs *ReceiptService) FindReceipt(r *model.ReceiptResponse, id uuid.UUID) error {
 	var receipt model.Receipt
-	database.DB.First(&receipt, id)
+	tx := database.DB.First(&receipt, id)
+	if tx.Error != nil && tx.Error == gorm.ErrRecordNotFound {
+		return errors.New("receipt not found")
+	}
 	*r = model.ReceiptResponse{
 		Description: receipt.Description,
 		Value:       receipt.Value,
 		Date:        receipt.Date,
 	}
+	return nil
 }
 
 func (rs *ReceiptService) UpdateReceipt(r *model.Receipt, id uuid.UUID) (uuid.UUID, error) {
@@ -70,4 +74,9 @@ func (rs *ReceiptService) UpdateReceipt(r *model.Receipt, id uuid.UUID) (uuid.UU
 		}
 	}
 	return id, nil
+}
+
+func (rs *ReceiptService) DeleteReceipt(id uuid.UUID) {
+	var receipt model.Receipt
+	database.DB.Delete(&receipt, id)
 }

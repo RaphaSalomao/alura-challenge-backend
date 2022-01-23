@@ -38,8 +38,15 @@ func FindAllReceipts(w http.ResponseWriter, r *http.Request) {
 func FindReceipt(w http.ResponseWriter, r *http.Request) {
 	var receipt model.ReceiptResponse
 	id := uuid.MustParse(mux.Vars(r)["id"])
-	receiptService.FindReceipt(&receipt, id)
-	utils.HandleResponse(w, http.StatusOK, receipt)
+	err := receiptService.FindReceipt(&receipt, id)
+	if err != nil {
+		utils.HandleResponse(w, http.StatusNotFound, struct {
+			Error string
+			Id    uuid.UUID
+		}{err.Error(), id})
+	} else {
+		utils.HandleResponse(w, http.StatusOK, receipt)
+	}
 }
 
 func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
@@ -55,4 +62,10 @@ func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
 	} else {
 		utils.HandleResponse(w, http.StatusOK, struct{ Id uuid.UUID }{receipt.Id})
 	}
+}
+
+func DeleteReceipt(w http.ResponseWriter, r *http.Request) {
+	id := uuid.MustParse(mux.Vars(r)["id"])
+	receiptService.DeleteReceipt(id)
+	utils.HandleResponse(w, http.StatusNoContent, nil)
 }

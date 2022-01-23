@@ -18,6 +18,13 @@ func HandleRequests() {
 	router.HandleFunc("/budget-control/api/v1/receipt", controller.FindAllReceipts).Methods("GET")
 	router.HandleFunc("/budget-control/api/v1/receipt/{id}", controller.FindReceipt).Methods("GET")
 	router.HandleFunc("/budget-control/api/v1/receipt/{id}", controller.UpdateReceipt).Methods("PUT")
+	router.HandleFunc("/budget-control/api/v1/receipt/{id}", controller.DeleteReceipt).Methods("DELETE")
+
+	router.HandleFunc("/budget-control/api/v1/expense", controller.CreateExpense).Methods("POST")
+	router.HandleFunc("/budget-control/api/v1/expense", controller.FindAllExpenses).Methods("GET")
+	router.HandleFunc("/budget-control/api/v1/expense/{id}", controller.FindExpense).Methods("GET")
+	router.HandleFunc("/budget-control/api/v1/expense/{id}", controller.UpdateExpense).Methods("PUT")
+	router.HandleFunc("/budget-control/api/v1/expense/{id}", controller.DeleteExpense).Methods("DELETE")
 	http.ListenAndServe(":8080", router)
 }
 
