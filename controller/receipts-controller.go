@@ -3,6 +3,7 @@ package controller
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/RaphaSalomao/alura-challenge-backend/model"
 	"github.com/RaphaSalomao/alura-challenge-backend/service"
@@ -31,7 +32,8 @@ func CreateReceipt(w http.ResponseWriter, r *http.Request) {
 
 func FindAllReceipts(w http.ResponseWriter, r *http.Request) {
 	var receipts []model.ReceiptResponse
-	receiptService.FindAllReceipts(&receipts)
+	description := strings.ToUpper(r.URL.Query().Get("description"))
+	receiptService.FindAllReceipts(&receipts, description)
 	utils.HandleResponse(w, http.StatusOK, receipts)
 }
 
@@ -68,4 +70,15 @@ func DeleteReceipt(w http.ResponseWriter, r *http.Request) {
 	id := uuid.MustParse(mux.Vars(r)["id"])
 	receiptService.DeleteReceipt(id)
 	utils.HandleResponse(w, http.StatusNoContent, nil)
+}
+
+func ReceiptsByPeriod(w http.ResponseWriter, r *http.Request) {
+	var receipts []model.ReceiptResponse
+	vars := mux.Vars(r)
+	err := receiptService.ReceiptsByPeriod(&receipts, vars["year"], vars["month"])
+	if err != nil {
+		utils.HandleResponse(w, http.StatusUnprocessableEntity, struct{ Error string }{err.Error()})
+	} else {
+		utils.HandleResponse(w, http.StatusOK, receipts)
+	}
 }
