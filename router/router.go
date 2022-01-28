@@ -1,6 +1,7 @@
 package router
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/RaphaSalomao/alura-challenge-backend/controller"
@@ -28,7 +29,11 @@ func HandleRequests() {
 	router.HandleFunc("/budget-control/api/v1/expense/{id}", controller.DeleteExpense).Methods("DELETE")
 	router.HandleFunc("/budget-control/api/v1/expense/{year}/{month}", controller.ExpensesByPeriod).Methods("GET")
 
+	router.HandleFunc("/budget-control/api/v1/summary/{year}/{month}", controller.MonthBalanceSumary).Methods("GET")
+
+	fmt.Println("Server is running")
 	http.ListenAndServe(":8080", router)
+
 }
 
 func middleware(next http.Handler) http.Handler {

@@ -7,14 +7,17 @@ import (
 
 	"github.com/RaphaSalomao/alura-challenge-backend/database"
 	"github.com/RaphaSalomao/alura-challenge-backend/model"
+	"github.com/RaphaSalomao/alura-challenge-backend/model/enum"
 	"github.com/RaphaSalomao/alura-challenge-backend/utils"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
-type ExpenseService struct{}
+type expenseService struct{}
 
-func (rs *ExpenseService) CreateExpense(e *model.ExpenseRequest) (uuid.UUID, error) {
+var ExpenseService = expenseService{}
+
+func (rs *expenseService) CreateExpense(e *model.ExpenseRequest) (uuid.UUID, error) {
 	var entity *model.Expense
 	t1, t2, err := utils.MonthInterval(e.Date)
 	if err != nil {
@@ -35,7 +38,7 @@ func (rs *ExpenseService) CreateExpense(e *model.ExpenseRequest) (uuid.UUID, err
 	return entity.Id, nil
 }
 
-func (rs *ExpenseService) FindAllExpenses(e *[]model.ExpenseResponse, description string) {
+func (rs *expenseService) FindAllExpenses(e *[]model.ExpenseResponse, description string) {
 	var expenses []model.Expense
 	if description != "" {
 		database.DB.Find(&expenses, "description = ?", description)
@@ -51,7 +54,7 @@ func (rs *ExpenseService) FindAllExpenses(e *[]model.ExpenseResponse, descriptio
 	}
 }
 
-func (rs *ExpenseService) FindExpense(e *model.ExpenseResponse, id uuid.UUID) error {
+func (rs *expenseService) FindExpense(e *model.ExpenseResponse, id uuid.UUID) error {
 	var expense model.Expense
 	tx := database.DB.First(&expense, id)
 	if tx.Error != nil && tx.Error == gorm.ErrRecordNotFound {
@@ -65,7 +68,7 @@ func (rs *ExpenseService) FindExpense(e *model.ExpenseResponse, id uuid.UUID) er
 	return nil
 }
 
-func (rs *ExpenseService) UpdateExpense(e *model.Expense, id uuid.UUID) (uuid.UUID, error) {
+func (rs *expenseService) UpdateExpense(e *model.Expense, id uuid.UUID) (uuid.UUID, error) {
 	var expense model.Expense
 	tx := database.DB.First(&expense, id)
 	if tx.Error != nil && tx.Error == gorm.ErrRecordNotFound {
@@ -94,12 +97,12 @@ func (rs *ExpenseService) UpdateExpense(e *model.Expense, id uuid.UUID) (uuid.UU
 	return id, nil
 }
 
-func (rs *ExpenseService) DeleteExpense(id uuid.UUID) {
+func (rs *expenseService) DeleteExpense(id uuid.UUID) {
 	var expense model.Expense
 	database.DB.Delete(&expense, id)
 }
 
-func (rs *ExpenseService) ExpensesByPeriod(e *[]model.ExpenseResponse, year string, month string) error {
+func (rs *expenseService) ExpensesByPeriod(e *[]model.ExpenseResponse, year string, month string) error {
 	var expenses []model.Expense
 	t1, t2, err := utils.MonthInterval(fmt.Sprintf("%s-%s", year, month))
 	if err != nil {
@@ -118,19 +121,26 @@ func (rs *ExpenseService) ExpensesByPeriod(e *[]model.ExpenseResponse, year stri
 	return nil
 }
 
-func (rs *ExpenseService) TotalExpenseValueByPeriod(year, month string) (float64, error) {
+func (rs *expenseService) TotalExpenseValueByPeriod(year, month string) (total float64, categoriesBalance map[enum.Category]float64, err error) {
 	var expenses []model.Expense
+	categoriesBalance = map[enum.Category]float64{
+		enum.CategoryFood:       0,
+		enum.CategoryHealth:     0,
+		enum.CategoryHome:       0,
+		enum.CategoryTransport:  0,
+		enum.CategoryEducation:  0,
+		enum.CategoryLeisure:    0,
+		enum.CategoryUnforeseen: 0,
+		enum.CategoryOthers:     0,
+	}
 	t1, t2, err := utils.MonthInterval(fmt.Sprintf("%s-%s", year, month))
 	if err != nil {
-		return 0, err
+		return 0, nil, err
 	}
 	database.DB.Find(&expenses, "date between ? AND ?", t1, t2)
-	var total float64
 	for _, v := range expenses {
+		categoriesBalance[v.Category] += v.Value
 		total += v.Value
 	}
-
-	// sort.Sort()
-
-	return total, nil
+	return
 }

@@ -12,14 +12,10 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var (
-	receiptService = service.ReceiptService{}
-)
-
 func CreateReceipt(w http.ResponseWriter, r *http.Request) {
 	var receipt model.Receipt
 	json.NewDecoder(r.Body).Decode(&receipt)
-	id, err := receiptService.CreateReceipt(&receipt)
+	id, err := service.ReceiptService.CreateReceipt(&receipt)
 	if err != nil {
 		utils.HandleResponse(w, http.StatusUnprocessableEntity, struct {
 			Error string
@@ -33,14 +29,14 @@ func CreateReceipt(w http.ResponseWriter, r *http.Request) {
 func FindAllReceipts(w http.ResponseWriter, r *http.Request) {
 	var receipts []model.ReceiptResponse
 	description := strings.ToUpper(r.URL.Query().Get("description"))
-	receiptService.FindAllReceipts(&receipts, description)
+	service.ReceiptService.FindAllReceipts(&receipts, description)
 	utils.HandleResponse(w, http.StatusOK, receipts)
 }
 
 func FindReceipt(w http.ResponseWriter, r *http.Request) {
 	var receipt model.ReceiptResponse
 	id := uuid.MustParse(mux.Vars(r)["id"])
-	err := receiptService.FindReceipt(&receipt, id)
+	err := service.ReceiptService.FindReceipt(&receipt, id)
 	if err != nil {
 		utils.HandleResponse(w, http.StatusNotFound, struct {
 			Error string
@@ -55,7 +51,7 @@ func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
 	var receipt model.Receipt
 	id := uuid.MustParse(mux.Vars(r)["id"])
 	json.NewDecoder(r.Body).Decode(&receipt)
-	id, err := receiptService.UpdateReceipt(&receipt, id)
+	id, err := service.ReceiptService.UpdateReceipt(&receipt, id)
 	if err != nil {
 		utils.HandleResponse(w, http.StatusUnprocessableEntity, struct {
 			Error string
@@ -68,14 +64,14 @@ func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
 
 func DeleteReceipt(w http.ResponseWriter, r *http.Request) {
 	id := uuid.MustParse(mux.Vars(r)["id"])
-	receiptService.DeleteReceipt(id)
+	service.ReceiptService.DeleteReceipt(id)
 	utils.HandleResponse(w, http.StatusNoContent, nil)
 }
 
 func ReceiptsByPeriod(w http.ResponseWriter, r *http.Request) {
 	var receipts []model.ReceiptResponse
 	vars := mux.Vars(r)
-	err := receiptService.ReceiptsByPeriod(&receipts, vars["year"], vars["month"])
+	err := service.ReceiptService.ReceiptsByPeriod(&receipts, vars["year"], vars["month"])
 	if err != nil {
 		utils.HandleResponse(w, http.StatusUnprocessableEntity, struct{ Error string }{err.Error()})
 	} else {

@@ -15,6 +15,7 @@ import (
 
 var (
 	DB *gorm.DB
+	M  *migrate.Migrate
 
 	dbHost     string
 	dbUser     string
@@ -22,18 +23,21 @@ var (
 	dbPort     string
 	dbSslMode  string
 	dbPassword string
+
+	mPath string
 )
 
-func Connect() {
+func Connect() error {
 	LoadEnv()
-	dbUri := fmt.Sprintf("host=%s user=%s database=%s port=%s password=%s sslmode=%s",
-		dbHost, dbUser, dbName, dbPort, dbPassword, dbSslMode)
 	var err error
-	DB, err = gorm.Open(gormPostgres.Open(dbUri), &gorm.Config{})
+	fmt.Println(DbConnectionString())
+	DB, err = gorm.Open(gormPostgres.Open(DbConnectionString()), &gorm.Config{})
 	if err != nil {
-		panic(err)
+		return err
 	}
+	setupMigration()
 	doMigrate()
+	return nil
 }
 
 func LoadEnv() {
@@ -43,9 +47,15 @@ func LoadEnv() {
 	dbPort = os.Getenv("DB_PORT")
 	dbSslMode = os.Getenv("DB_SSLMODE")
 	dbPassword = os.Getenv("DB_PASSWORD")
+	mPath = os.Getenv("M_PATH")
 }
 
-func doMigrate() {
+func DbConnectionString() string {
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
+		dbUser, dbPassword, dbHost, dbPort, dbName, dbSslMode)
+}
+
+func setupMigration() {
 	db, err := DB.DB()
 	if err != nil {
 		panic(err)
@@ -54,13 +64,16 @@ func doMigrate() {
 	if err != nil {
 		panic(err)
 	}
-	m, err := migrate.NewWithDatabaseInstance("file://_migrations", "postgres", driver)
+	M, err = migrate.NewWithDatabaseInstance(mPath, "postgres", driver)
 	if err != nil {
 		panic(err)
 	}
-	err = m.Up()
+}
+
+func doMigrate() {
+	err := M.Up()
 	if err != nil && err != migrate.ErrNoChange {
-		handleMigrationError(m, err)
+		handleMigrationError(M, err)
 	}
 }
 

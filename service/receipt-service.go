@@ -12,9 +12,13 @@ import (
 	"gorm.io/gorm"
 )
 
-type ReceiptService struct{}
+type RreceiptService struct {
+	DB gorm.DB
+}
 
-func (rs *ReceiptService) CreateReceipt(r *model.Receipt) (uuid.UUID, error) {
+var ReceiptService = RreceiptService{}
+
+func (rs *RreceiptService) CreateReceipt(r *model.Receipt) (uuid.UUID, error) {
 	var entity *model.Receipt
 	t1, t2, err := utils.MonthInterval(r.Date)
 	if err != nil {
@@ -29,7 +33,7 @@ func (rs *ReceiptService) CreateReceipt(r *model.Receipt) (uuid.UUID, error) {
 	return r.Id, nil
 }
 
-func (rs *ReceiptService) FindAllReceipts(r *[]model.ReceiptResponse, description string) {
+func (rs *RreceiptService) FindAllReceipts(r *[]model.ReceiptResponse, description string) {
 	var receipts []model.Receipt
 	if description != "" {
 		database.DB.Find(&receipts, "description = ?", description)
@@ -45,9 +49,9 @@ func (rs *ReceiptService) FindAllReceipts(r *[]model.ReceiptResponse, descriptio
 	}
 }
 
-func (rs *ReceiptService) FindReceipt(r *model.ReceiptResponse, id uuid.UUID) error {
+func (rs *RreceiptService) FindReceipt(r *model.ReceiptResponse, id uuid.UUID) error {
 	var receipt model.Receipt
-	tx := database.DB.First(&receipt, id)
+	tx := rs.DB.First(&receipt, id)
 	if tx.Error != nil && tx.Error == gorm.ErrRecordNotFound {
 		return errors.New("receipt not found")
 	}
@@ -59,7 +63,7 @@ func (rs *ReceiptService) FindReceipt(r *model.ReceiptResponse, id uuid.UUID) er
 	return nil
 }
 
-func (rs *ReceiptService) UpdateReceipt(r *model.Receipt, id uuid.UUID) (uuid.UUID, error) {
+func (rs *RreceiptService) UpdateReceipt(r *model.Receipt, id uuid.UUID) (uuid.UUID, error) {
 	var receipt model.Receipt
 	tx := database.DB.First(&receipt, id)
 	if tx.Error != nil && tx.Error == gorm.ErrRecordNotFound {
@@ -88,12 +92,12 @@ func (rs *ReceiptService) UpdateReceipt(r *model.Receipt, id uuid.UUID) (uuid.UU
 	return id, nil
 }
 
-func (rs *ReceiptService) DeleteReceipt(id uuid.UUID) {
+func (rs *RreceiptService) DeleteReceipt(id uuid.UUID) {
 	var receipt model.Receipt
 	database.DB.Delete(&receipt, id)
 }
 
-func (rs *ReceiptService) ReceiptsByPeriod(r *[]model.ReceiptResponse, year string, month string) error {
+func (rs *RreceiptService) ReceiptsByPeriod(r *[]model.ReceiptResponse, year string, month string) error {
 	var receipts []model.Receipt
 	t1, t2, err := utils.MonthInterval(fmt.Sprintf("%s-%s", year, month))
 	if err != nil {
@@ -112,7 +116,7 @@ func (rs *ReceiptService) ReceiptsByPeriod(r *[]model.ReceiptResponse, year stri
 	return nil
 }
 
-func (rs *ReceiptService) TotalReceiptValueByPeriod(year, month string) (float64, error) {
+func (rs *RreceiptService) TotalReceiptValueByPeriod(year, month string) (float64, error) {
 	var receipts []model.Receipt
 	t1, t2, err := utils.MonthInterval(fmt.Sprintf("%s-%s", year, month))
 	if err != nil {
@@ -125,4 +129,3 @@ func (rs *ReceiptService) TotalReceiptValueByPeriod(year, month string) (float64
 	}
 	return total, nil
 }
-

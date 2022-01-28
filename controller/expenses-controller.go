@@ -12,14 +12,10 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var (
-	expenseService = service.ExpenseService{}
-)
-
 func CreateExpense(w http.ResponseWriter, r *http.Request) {
 	var expense model.ExpenseRequest
 	json.NewDecoder(r.Body).Decode(&expense)
-	id, err := expenseService.CreateExpense(&expense)
+	id, err := service.ExpenseService.CreateExpense(&expense)
 	if err != nil {
 		utils.HandleResponse(w, http.StatusUnprocessableEntity, struct {
 			Error string
@@ -33,14 +29,14 @@ func CreateExpense(w http.ResponseWriter, r *http.Request) {
 func FindAllExpenses(w http.ResponseWriter, r *http.Request) {
 	var expenses []model.ExpenseResponse
 	desc := strings.ToUpper(r.URL.Query().Get("description"))
-	expenseService.FindAllExpenses(&expenses, desc)
+	service.ExpenseService.FindAllExpenses(&expenses, desc)
 	utils.HandleResponse(w, http.StatusOK, expenses)
 }
 
 func FindExpense(w http.ResponseWriter, r *http.Request) {
 	var expense model.ExpenseResponse
 	id := uuid.MustParse(mux.Vars(r)["id"])
-	err := expenseService.FindExpense(&expense, id)
+	err := service.ExpenseService.FindExpense(&expense, id)
 	if err != nil {
 		utils.HandleResponse(w, http.StatusNotFound, struct {
 			Error string
@@ -55,7 +51,7 @@ func UpdateExpense(w http.ResponseWriter, r *http.Request) {
 	var expense model.Expense
 	id := uuid.MustParse(mux.Vars(r)["id"])
 	json.NewDecoder(r.Body).Decode(&expense)
-	id, err := expenseService.UpdateExpense(&expense, id)
+	id, err := service.ExpenseService.UpdateExpense(&expense, id)
 	if err != nil {
 		utils.HandleResponse(w, http.StatusUnprocessableEntity, struct {
 			Error string
@@ -68,14 +64,14 @@ func UpdateExpense(w http.ResponseWriter, r *http.Request) {
 
 func DeleteExpense(w http.ResponseWriter, r *http.Request) {
 	id := uuid.MustParse(mux.Vars(r)["id"])
-	expenseService.DeleteExpense(id)
+	service.ExpenseService.DeleteExpense(id)
 	utils.HandleResponse(w, http.StatusNoContent, nil)
 }
 
 func ExpensesByPeriod(w http.ResponseWriter, r *http.Request) {
 	var expenses []model.ExpenseResponse
 	vars := mux.Vars(r)
-	err := expenseService.ExpensesByPeriod(&expenses, vars["year"], vars["month"])
+	err := service.ExpenseService.ExpensesByPeriod(&expenses, vars["year"], vars["month"])
 	if err != nil {
 		utils.HandleResponse(w, http.StatusUnprocessableEntity, struct{ Error string }{err.Error()})
 	} else {
