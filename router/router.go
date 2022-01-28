@@ -3,6 +3,9 @@ package router
 import (
 	"fmt"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/RaphaSalomao/alura-challenge-backend/controller"
 	"github.com/RaphaSalomao/alura-challenge-backend/utils"
@@ -31,9 +34,16 @@ func HandleRequests() {
 
 	router.HandleFunc("/budget-control/api/v1/summary/{year}/{month}", controller.MonthBalanceSumary).Methods("GET")
 
-	fmt.Println("Server is running")
-	http.ListenAndServe(":8080", router)
+	go http.ListenAndServe(":8080", router)
 
+	fmt.Println("Server is running")
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	<-quit
+
+	fmt.Println("Server down.")
 }
 
 func middleware(next http.Handler) http.Handler {

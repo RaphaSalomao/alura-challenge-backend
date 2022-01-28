@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/RaphaSalomao/alura-challenge-backend/database"
 	"github.com/RaphaSalomao/alura-challenge-backend/router"
 	"github.com/joho/godotenv"
@@ -12,6 +14,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	
 	router.HandleRequests()
 
+	fmt.Println("Exiting...")
 }

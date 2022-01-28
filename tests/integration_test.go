@@ -1,9 +1,10 @@
-package test
+package test_test
 
 import (
-	"fmt"
+	"encoding/json"
 	"net/http"
-	"strings"
+	"os"
+	"syscall"
 	"testing"
 
 	"github.com/RaphaSalomao/alura-challenge-backend/database"
@@ -29,7 +30,7 @@ func (s *ReceiptServiceTestSuite) SetupSuite() {
 	s.db = database.DB
 	s.m = database.M
 
-	router.HandleRequests()
+	go router.HandleRequests()
 }
 
 func (s *ReceiptServiceTestSuite) TearDownTest() {
@@ -39,6 +40,8 @@ func (s *ReceiptServiceTestSuite) TearDownTest() {
 func (s *ReceiptServiceTestSuite) TearDownSuite() {
 	s.m.Down()
 	s.db.Exec("DROP TABLE schema_migrations")
+	p, _ := os.FindProcess(os.Getpid())
+	p.Signal(syscall.SIGINT)
 }
 
 func TestReceiptServiceTestSuite(t *testing.T) {
@@ -57,9 +60,12 @@ func (s *ReceiptServiceTestSuite) TestFindReceipts_Fail() {
 }
 
 func (s *ReceiptServiceTestSuite) TestHealthCheck_Success() {
-	req, err := http.NewRequest(http.MethodGet, ("http://localhost:8080/budget-control/api/v1/health"), strings.NewReader(""))
-	if err != nil {
-		fmt.Println("ERROR AT REQUEST")
-	}
-	fmt.Println(req.Response.StatusCode)
+	resp, err := http.Get("http://localhost:8080/budget-control/api/v1/health")
+	s.Require().NoError(err)
+	defer resp.Body.Close()
+
+	expect := struct{ Online bool }{true}
+	var got struct{ Online bool }
+	json.NewDecoder(resp.Body).Decode(&got)
+	s.Require().Equal(expect, got)
 }
