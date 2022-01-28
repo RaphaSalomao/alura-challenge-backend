@@ -24,11 +24,12 @@ type ReceiptServiceTestSuite struct {
 }
 
 func (s *ReceiptServiceTestSuite) SetupSuite() {
-	go router.HandleRequests()
 	s.Require().NoError(godotenv.Load("test.env"))
 	s.Require().NoError(database.Connect())
 	s.db = database.DB
 	s.m = database.M
+
+	router.HandleRequests()
 }
 
 func (s *ReceiptServiceTestSuite) TearDownTest() {
