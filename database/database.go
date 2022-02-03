@@ -6,6 +6,7 @@ import (
 
 	gormPostgres "gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
@@ -25,13 +26,19 @@ var (
 	dbPassword string
 
 	mPath string
+
+	env string
 )
 
 func Connect() error {
 	LoadEnv()
 	var err error
 	fmt.Println(DbConnectionString())
-	DB, err = gorm.Open(gormPostgres.Open(DbConnectionString()), &gorm.Config{})
+
+	config := gorm.Config{
+		Logger: logger.Default.LogMode(logger.Silent),
+	}
+	DB, err = gorm.Open(gormPostgres.Open(DbConnectionString()), &config)
 	if err != nil {
 		return err
 	}
@@ -48,6 +55,7 @@ func LoadEnv() {
 	dbSslMode = os.Getenv("DB_SSLMODE")
 	dbPassword = os.Getenv("DB_PASSWORD")
 	mPath = os.Getenv("M_PATH")
+	env = os.Getenv("ENV")
 }
 
 func DbConnectionString() string {
@@ -73,6 +81,7 @@ func setupMigration() {
 func doMigrate() {
 	err := M.Up()
 	if err != nil && err != migrate.ErrNoChange {
+		fmt.Println("Migration Up error:", err)
 		handleMigrationError(M, err)
 	}
 }
@@ -80,7 +89,12 @@ func doMigrate() {
 func handleMigrationError(m *migrate.Migrate, err error) {
 	version, dirty, error := m.Version()
 	if error != nil {
-		panic(error)
+		if env == "test" {
+			DB.Exec("DROP SCHEMA public CASCADE; CREATE SCHEMA public;")
+			doMigrate()
+		} else {
+			panic(error)
+		}
 	}
 	error = migrate.ErrDirty{Version: int(version)}
 	if err == error && dirty {

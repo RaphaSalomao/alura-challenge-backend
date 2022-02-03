@@ -1,2 +1,1 @@
-ALTER TABLE receipts ADD COLUMN category VARCHAR(255);
 ALTER TABLE expenses ADD COLUMN category VARCHAR(255);

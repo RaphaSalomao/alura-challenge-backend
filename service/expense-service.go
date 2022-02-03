@@ -17,7 +17,7 @@ type expenseService struct{}
 
 var ExpenseService = expenseService{}
 
-func (rs *expenseService) CreateExpense(e *model.ExpenseRequest) (uuid.UUID, error) {
+func (es *expenseService) CreateExpense(e *model.ExpenseRequest) (uuid.UUID, error) {
 	var entity *model.Expense
 	t1, t2, err := utils.MonthInterval(e.Date)
 	if err != nil {
@@ -38,7 +38,7 @@ func (rs *expenseService) CreateExpense(e *model.ExpenseRequest) (uuid.UUID, err
 	return entity.Id, nil
 }
 
-func (rs *expenseService) FindAllExpenses(e *[]model.ExpenseResponse, description string) {
+func (es *expenseService) FindAllExpenses(e *[]model.ExpenseResponse, description string) {
 	var expenses []model.Expense
 	if description != "" {
 		database.DB.Find(&expenses, "description = ?", description)
@@ -54,7 +54,7 @@ func (rs *expenseService) FindAllExpenses(e *[]model.ExpenseResponse, descriptio
 	}
 }
 
-func (rs *expenseService) FindExpense(e *model.ExpenseResponse, id uuid.UUID) error {
+func (es *expenseService) FindExpense(e *model.ExpenseResponse, id uuid.UUID) error {
 	var expense model.Expense
 	tx := database.DB.First(&expense, id)
 	if tx.Error != nil && tx.Error == gorm.ErrRecordNotFound {
@@ -64,22 +64,18 @@ func (rs *expenseService) FindExpense(e *model.ExpenseResponse, id uuid.UUID) er
 		Description: expense.Description,
 		Value:       expense.Value,
 		Date:        expense.Date,
+		Category:    expense.Category,
 	}
 	return nil
 }
 
-func (rs *expenseService) UpdateExpense(e *model.Expense, id uuid.UUID) (uuid.UUID, error) {
+func (es *expenseService) UpdateExpense(e *model.ExpenseRequest, id uuid.UUID) (uuid.UUID, error) {
 	var expense model.Expense
 	tx := database.DB.First(&expense, id)
 	if tx.Error != nil && tx.Error == gorm.ErrRecordNotFound {
 		return id, errors.New("expense not found")
 	}
-	e.CreatedAt = expense.CreatedAt
-	if expense.Description == e.Description {
-		e.Id = id
-		expense = *e
-		database.DB.Save(&expense)
-	} else {
+	if es.shouldCheckExpenseInCurrentMonth(e, &expense) {
 		var entity model.Expense
 		t1, t2, err := utils.MonthInterval(e.Date)
 		if err != nil {
@@ -87,22 +83,30 @@ func (rs *expenseService) UpdateExpense(e *model.Expense, id uuid.UUID) (uuid.UU
 		}
 		tx := database.DB.Where("description = ? AND date between ? AND ?", strings.ToUpper(e.Description), t1, t2).First(&entity)
 		if tx.Error != nil && tx.Error == gorm.ErrRecordNotFound {
-			e.Id = id
-			expense = *e
+			expense.Category = e.Category
+			expense.Date = e.Date
+			expense.Description = e.Description
+			expense.Value = e.Value
 			database.DB.Save(&expense)
 		} else {
-			return entity.Id, errors.New("expense already created in current month")
+			return entity.Id, fmt.Errorf("expense %s already created in current month", entity.Description)
 		}
+	} else {
+		expense.Category = e.Category
+		expense.Date = e.Date
+		expense.Description = e.Description
+		expense.Value = e.Value
+		database.DB.Save(&expense)
 	}
 	return id, nil
 }
 
-func (rs *expenseService) DeleteExpense(id uuid.UUID) {
+func (es *expenseService) DeleteExpense(id uuid.UUID) {
 	var expense model.Expense
 	database.DB.Delete(&expense, id)
 }
 
-func (rs *expenseService) ExpensesByPeriod(e *[]model.ExpenseResponse, year string, month string) error {
+func (es *expenseService) ExpensesByPeriod(e *[]model.ExpenseResponse, year string, month string) error {
 	var expenses []model.Expense
 	t1, t2, err := utils.MonthInterval(fmt.Sprintf("%s-%s", year, month))
 	if err != nil {
@@ -121,18 +125,9 @@ func (rs *expenseService) ExpensesByPeriod(e *[]model.ExpenseResponse, year stri
 	return nil
 }
 
-func (rs *expenseService) TotalExpenseValueByPeriod(year, month string) (total float64, categoriesBalance map[enum.Category]float64, err error) {
+func (es *expenseService) TotalExpenseValueByPeriod(year, month string) (total float64, categoriesBalance map[enum.Category]float64, err error) {
 	var expenses []model.Expense
-	categoriesBalance = map[enum.Category]float64{
-		enum.CategoryFood:       0,
-		enum.CategoryHealth:     0,
-		enum.CategoryHome:       0,
-		enum.CategoryTransport:  0,
-		enum.CategoryEducation:  0,
-		enum.CategoryLeisure:    0,
-		enum.CategoryUnforeseen: 0,
-		enum.CategoryOthers:     0,
-	}
+	categoriesBalance = map[enum.Category]float64{}
 	t1, t2, err := utils.MonthInterval(fmt.Sprintf("%s-%s", year, month))
 	if err != nil {
 		return 0, nil, err
@@ -143,4 +138,12 @@ func (rs *expenseService) TotalExpenseValueByPeriod(year, month string) (total f
 		total += v.Value
 	}
 	return
+}
+
+func (es *expenseService) shouldCheckExpenseInCurrentMonth(expenseRequest *model.ExpenseRequest, expense *model.Expense) bool {
+	if expenseRequest.Date != expense.Date && expenseRequest.Description != expense.Description {
+		return true
+	} else {
+		return false
+	}
 }

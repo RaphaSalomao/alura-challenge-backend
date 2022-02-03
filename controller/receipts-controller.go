@@ -48,7 +48,7 @@ func FindReceipt(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
-	var receipt model.Receipt
+	var receipt model.ReceiptRequest
 	id := uuid.MustParse(mux.Vars(r)["id"])
 	json.NewDecoder(r.Body).Decode(&receipt)
 	id, err := service.ReceiptService.UpdateReceipt(&receipt, id)
@@ -58,7 +58,7 @@ func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
 			Id    uuid.UUID
 		}{err.Error(), id})
 	} else {
-		utils.HandleResponse(w, http.StatusOK, struct{ Id uuid.UUID }{receipt.Id})
+		utils.HandleResponse(w, http.StatusNoContent, nil)
 	}
 }
 

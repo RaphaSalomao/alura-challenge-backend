@@ -48,7 +48,7 @@ func FindExpense(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateExpense(w http.ResponseWriter, r *http.Request) {
-	var expense model.Expense
+	var expense model.ExpenseRequest
 	id := uuid.MustParse(mux.Vars(r)["id"])
 	json.NewDecoder(r.Body).Decode(&expense)
 	id, err := service.ExpenseService.UpdateExpense(&expense, id)
@@ -58,7 +58,7 @@ func UpdateExpense(w http.ResponseWriter, r *http.Request) {
 			Id    uuid.UUID
 		}{err.Error(), id})
 	} else {
-		utils.HandleResponse(w, http.StatusOK, struct{ Id uuid.UUID }{expense.Id})
+		utils.HandleResponse(w, http.StatusNoContent, nil)
 	}
 }
 

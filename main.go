@@ -14,8 +14,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	
-	router.HandleRequests()
+	router.HandleRequests(false)
 
 	fmt.Println("Exiting...")
 }

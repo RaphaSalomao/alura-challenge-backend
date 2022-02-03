@@ -12,11 +12,21 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func HandleRequests() {
+var (
+	PermitAll       bool
+	unauthenticated = map[string]bool{
+		"/budget-control/api/v1/health": true,
+	}
+)
+
+func HandleRequests(permitAll bool) {
+	PermitAll = permitAll
 	router := mux.NewRouter()
 	router.Use(middleware)
 
-	router.HandleFunc("/budget-control/api/v1/health", health).Methods("GET")
+	router.HandleFunc("/budget-control/api/v1/health", controller.Health).Methods("GET")
+	router.HandleFunc("/budget-control/api/v1/user", controller.CreateUser).Methods("POST")
+	router.HandleFunc("/budget-control/api/v1/authenticate", controller.Authenticate).Methods("POST")
 
 	router.HandleFunc("/budget-control/api/v1/receipt", controller.CreateReceipt).Methods("POST")
 	router.HandleFunc("/budget-control/api/v1/receipt", controller.FindAllReceipts).Methods("GET")
@@ -36,11 +46,10 @@ func HandleRequests() {
 
 	go http.ListenAndServe(":8080", router)
 
-	fmt.Println("Server is running")
-
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
+	fmt.Println("Server is running")
 	<-quit
 
 	fmt.Println("Server down.")
@@ -50,11 +59,15 @@ func middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("Content-Type", "application/json")
+
+			if !unauthenticated[r.URL.Path] && !PermitAll {
+				token := r.Header.Get("Authorization")
+				if token == "" {
+					utils.HandleResponse(w, http.StatusUnauthorized, struct{ Error string }{Error: "Missing token"})
+					return
+				}
+			}
 			next.ServeHTTP(w, r)
 		},
 	)
-}
-
-func health(w http.ResponseWriter, r *http.Request) {
-	utils.HandleResponse(w, http.StatusOK, struct{ Online bool }{true})
 }

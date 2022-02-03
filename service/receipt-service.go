@@ -12,9 +12,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type RreceiptService struct {
-	DB gorm.DB
-}
+type RreceiptService struct{}
 
 var ReceiptService = RreceiptService{}
 
@@ -51,7 +49,7 @@ func (rs *RreceiptService) FindAllReceipts(r *[]model.ReceiptResponse, descripti
 
 func (rs *RreceiptService) FindReceipt(r *model.ReceiptResponse, id uuid.UUID) error {
 	var receipt model.Receipt
-	tx := rs.DB.First(&receipt, id)
+	tx := database.DB.First(&receipt)
 	if tx.Error != nil && tx.Error == gorm.ErrRecordNotFound {
 		return errors.New("receipt not found")
 	}
@@ -63,18 +61,13 @@ func (rs *RreceiptService) FindReceipt(r *model.ReceiptResponse, id uuid.UUID) e
 	return nil
 }
 
-func (rs *RreceiptService) UpdateReceipt(r *model.Receipt, id uuid.UUID) (uuid.UUID, error) {
+func (rs *RreceiptService) UpdateReceipt(r *model.ReceiptRequest, id uuid.UUID) (uuid.UUID, error) {
 	var receipt model.Receipt
 	tx := database.DB.First(&receipt, id)
 	if tx.Error != nil && tx.Error == gorm.ErrRecordNotFound {
 		return id, errors.New("receipt not found")
 	}
-	r.CreatedAt = receipt.CreatedAt
-	if receipt.Description == r.Description {
-		r.Id = id
-		receipt = *r
-		database.DB.Save(&receipt)
-	} else {
+	if rs.shouldCheckReceiptInCurrentMonth(r, &receipt) {
 		var entity model.Receipt
 		t1, t2, err := utils.MonthInterval(r.Date)
 		if err != nil {
@@ -82,12 +75,18 @@ func (rs *RreceiptService) UpdateReceipt(r *model.Receipt, id uuid.UUID) (uuid.U
 		}
 		tx := database.DB.Where("description = ? AND date between ? AND ?", strings.ToUpper(r.Description), t1, t2).First(&entity)
 		if tx.Error != nil && tx.Error == gorm.ErrRecordNotFound {
-			r.Id = id
-			receipt = *r
+			receipt.Date = r.Date
+			receipt.Description = r.Description
+			receipt.Value = r.Value
 			database.DB.Save(&receipt)
 		} else {
-			return entity.Id, errors.New("receipt already created in current month")
+			return entity.Id, fmt.Errorf("receipt %s already created in current month", entity.Description)
 		}
+	} else {
+		receipt.Date = r.Date
+		receipt.Description = r.Description
+		receipt.Value = r.Value
+		database.DB.Save(&receipt)
 	}
 	return id, nil
 }
@@ -110,7 +109,6 @@ func (rs *RreceiptService) ReceiptsByPeriod(r *[]model.ReceiptResponse, year str
 			Description: v.Description,
 			Value:       v.Value,
 			Date:        v.Date,
-			Category:    v.Category,
 		})
 	}
 	return nil
@@ -128,4 +126,12 @@ func (rs *RreceiptService) TotalReceiptValueByPeriod(year, month string) (float6
 		total += v.Value
 	}
 	return total, nil
+}
+
+func (rs *RreceiptService) shouldCheckReceiptInCurrentMonth(receiptRequest *model.ReceiptRequest, receipt *model.Receipt) bool {
+	if receiptRequest.Date != receipt.Date && receiptRequest.Description != receipt.Description {
+		return true
+	} else {
+		return false
+	}
 }
