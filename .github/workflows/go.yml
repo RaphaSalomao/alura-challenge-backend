@@ -1,0 +1,28 @@
+name: Go
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.17
+
+    - name: Build
+      run: go build -v ./...
+    
+    - name: Setup Test Database
+      run: docker-compose -f docker-compose.test.yml up -d
+    
+    - name: Test
+      run: go test -v ./test/...
