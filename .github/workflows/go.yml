@@ -22,7 +22,7 @@ jobs:
       run: go build -v ./...
     
     - name: Setup Test Database
-      run: docker-compose up -f docker-compose.test.yml -d
+      run: docker-compose -f docker-compose.test.yml up -d
     
     - name: Test
       run: go test -v ./test/...
