@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/RaphaSalomao/alura-challenge-backend/controller"
@@ -15,7 +16,9 @@ import (
 var (
 	PermitAll       bool
 	unauthenticated = map[string]bool{
-		"/budget-control/api/v1/health": true,
+		"/budget-control/api/v1/health":       true,
+		"/budget-control/api/v1/user":         true,
+		"/budget-control/api/v1/authenticate": true,
 	}
 )
 
@@ -59,11 +62,16 @@ func middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("Content-Type", "application/json")
-
 			if !unauthenticated[r.URL.Path] && !PermitAll {
-				token := r.Header.Get("Authorization")
-				if token == "" {
-					utils.HandleResponse(w, http.StatusUnauthorized, struct{ Error string }{Error: "Missing token"})
+				token := strings.Split(r.Header.Get("Authorization"), " ")
+				if len(token) == 1 && token[0] == "" {
+					utils.HandleResponse(w, http.StatusBadRequest, struct{ Error string }{Error: "missing token"})
+					return
+				} else if token[0] != "Bearer" || len(token) != 2 {
+					utils.HandleResponse(w, http.StatusBadRequest, struct{ Error string }{Error: "invalid token"})
+					return
+				} else if err := utils.ParseToken(token[1]); err != nil {
+					utils.HandleResponse(w, http.StatusUnauthorized, struct{ Error string }{Error: err.Error()})
 					return
 				}
 			}
