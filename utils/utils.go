@@ -11,8 +11,13 @@ import (
 	"github.com/RaphaSalomao/alura-challenge-backend/database"
 	"github.com/RaphaSalomao/alura-challenge-backend/model"
 	"github.com/golang-jwt/jwt"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
+)
+
+var (
+	key = []byte("0sQPpmdBGjDHKXb18jNh")
 )
 
 func HandleResponse(w http.ResponseWriter, status int, i interface{}) {
@@ -58,12 +63,13 @@ func ValidadeHashAndPassword(password string, hash string) bool {
 	return err == nil
 }
 
-func GenerateJWT(userId string, email string) (string, error) {
+func GenerateJWT(email string, id string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"email": email,
+		"id":    id,
 		"exp":   time.Now().Add(time.Minute * 3).Unix(),
 	})
-	tknString, err := token.SignedString([]byte(userId))
+	tknString, err := token.SignedString([]byte(key))
 	if err != nil {
 		return "", err
 	}
@@ -82,9 +88,9 @@ func ParseToken(tokenString string) error {
 }
 
 func KeyFunc(t *jwt.Token) (interface{}, error) {
-	email := t.Claims.(jwt.MapClaims)["email"]
+	id := t.Claims.(jwt.MapClaims)["id"]
 	var user model.User
-	tx := database.DB.Where("email = ?", email).First(&user)
+	tx := database.DB.First(&user, uuid.MustParse(id.(string)))
 	if tx.Error != nil {
 		if tx.Error == gorm.ErrRecordNotFound {
 			return nil, errors.New("invalid token")
@@ -92,5 +98,5 @@ func KeyFunc(t *jwt.Token) (interface{}, error) {
 			return nil, tx.Error
 		}
 	}
-	return []byte(user.Id.String()), nil
+	return []byte(key), nil
 }

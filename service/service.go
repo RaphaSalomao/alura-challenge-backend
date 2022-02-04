@@ -50,7 +50,7 @@ func Authenticate(u *model.UserRequest) (string, error) {
 		}
 	}
 	if utils.ValidadeHashAndPassword(u.Password, user.Password) {
-		return utils.GenerateJWT(user.Id.String(), user.Email)
+		return utils.GenerateJWT(user.Email, user.Id.String())
 	} else {
 		return "", errors.New("invalid user/password")
 	}
