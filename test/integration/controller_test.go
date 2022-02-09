@@ -15,6 +15,7 @@ import (
 	"github.com/RaphaSalomao/alura-challenge-backend/model"
 	"github.com/RaphaSalomao/alura-challenge-backend/model/enum"
 	"github.com/RaphaSalomao/alura-challenge-backend/router"
+	"github.com/RaphaSalomao/alura-challenge-backend/test/factory"
 	"github.com/RaphaSalomao/alura-challenge-backend/utils"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/joho/godotenv"
@@ -34,7 +35,7 @@ func (s *ControllerSuite) SetupSuite() {
 	s.db = database.DB
 	s.m = database.M
 
-	go router.HandleRequests(true)
+	go router.HandleRequests()
 	time.Sleep(2 * time.Second)
 }
 
@@ -69,21 +70,35 @@ func (s *ControllerSuite) TestHealthCheck_Success() {
 
 func (s *ControllerSuite) TestMonthBalanceSumary_Success() {
 	// prepare database
+	r := factory.Request{
+		User: model.User{
+			Email:    "email@email.com",
+			Password: "password",
+		},
+		Method: http.MethodGet,
+		DB:     s.db,
+		Client: http.Client{},
+	}
+	r.SaveUser()
+
 	receipts := []model.Receipt{
 		{
 			Description: "Receipt 1",
 			Value:       1100,
 			Date:        "2020-01-01T00:00:00Z",
+			UserId:      r.User.Id,
 		},
 		{
 			Description: "Receipt 2",
 			Value:       1200,
 			Date:        "2020-01-02T00:00:00Z",
+			UserId:      r.User.Id,
 		},
 		{
 			Description: "Receipt 3",
 			Value:       1300,
 			Date:        "2020-01-03T00:00:00Z",
+			UserId:      r.User.Id,
 		},
 	}
 	expenses := []model.Expense{
@@ -92,23 +107,28 @@ func (s *ControllerSuite) TestMonthBalanceSumary_Success() {
 			Value:       1100,
 			Date:        "2020-01-01T00:00:00Z",
 			Category:    enum.CategoryFood,
+			UserId:      r.User.Id,
 		},
 		{
 			Description: "Expense 2",
 			Value:       250,
 			Date:        "2020-01-02T00:00:00Z",
 			Category:    enum.CategoryHealth,
+			UserId:      r.User.Id,
 		},
 		{
 			Description: "Expense 3",
 			Value:       100,
 			Date:        "2020-01-03T00:00:00Z",
 			Category:    enum.CategoryHealth,
+			UserId:      r.User.Id,
 		},
 		{
 			Description: "Expense 4",
 			Value:       1000,
 			Date:        "2020-01-04T00:00:00Z",
+			Category:    enum.CategoryFood,
+			UserId:      r.User.Id,
 		},
 	}
 	s.db.Create(&receipts)
@@ -130,8 +150,8 @@ func (s *ControllerSuite) TestMonthBalanceSumary_Success() {
 
 	// do request
 	year, month := "2020", "01"
-	url := fmt.Sprintf("http://localhost:8080/budget-control/api/v1/summary/%s/%s", year, month)
-	resp, err := http.Get(url)
+	r.Path = fmt.Sprintf("/budget-control/api/v1/summary/%s/%s", year, month)
+	resp, err := r.DoRequest()
 	s.Require().NoError(err)
 
 	// assert response
@@ -191,14 +211,17 @@ func (s *ControllerSuite) TestAuthenticate_Success() {
 
 	// do request
 	resp, err := http.Post("http://localhost:8080/budget-control/api/v1/authenticate", "application/json", requestBody)
+	s.Require().NoError(err)
 
 	var tokenResponse struct{ Token string }
 	json.NewDecoder(resp.Body).Decode(&tokenResponse)
+	userId, err := utils.ParseToken(tokenResponse.Token)
 
 	// assert response
 	s.Require().NoError(err)
 	s.Require().Equal(http.StatusOK, resp.StatusCode)
-	s.Require().NoError(utils.ParseToken(tokenResponse.Token))
+	s.Require().NoError(err)
+	s.Require().Equal(user.Id.String(), userId)
 }
 
 func (s *ControllerSuite) TestAuthenticate_Fail() {

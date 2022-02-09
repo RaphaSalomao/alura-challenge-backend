@@ -37,9 +37,10 @@ func Authenticate(w http.ResponseWriter, r *http.Request) {
 }
 
 func MonthBalanceSumary(w http.ResponseWriter, r *http.Request) {
+	userId := utils.UserIdFromContext(r.Context())
 	vars := mux.Vars(r)
 	var balanceSumary model.BalanceSumaryResponse
-	err := service.BalanceSumary(&balanceSumary, vars["year"], vars["month"])
+	err := service.BalanceSumary(&balanceSumary, vars["year"], vars["month"], userId)
 	if err != nil {
 		utils.HandleResponse(w, http.StatusUnprocessableEntity, struct{ Error string }{Error: err.Error()})
 	} else {

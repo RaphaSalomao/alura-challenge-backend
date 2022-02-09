@@ -3,7 +3,6 @@ package controller
 import (
 	"encoding/json"
 	"net/http"
-	"strings"
 
 	"github.com/RaphaSalomao/alura-challenge-backend/model"
 	"github.com/RaphaSalomao/alura-challenge-backend/service"
@@ -13,9 +12,10 @@ import (
 )
 
 func CreateExpense(w http.ResponseWriter, r *http.Request) {
+	userId := utils.UserIdFromContext(r.Context())
 	var expense model.ExpenseRequest
 	json.NewDecoder(r.Body).Decode(&expense)
-	id, err := service.ExpenseService.CreateExpense(&expense)
+	id, err := service.ExpenseService.CreateExpense(&expense, userId)
 	if err != nil {
 		utils.HandleResponse(w, http.StatusUnprocessableEntity, struct {
 			Error string
@@ -27,16 +27,18 @@ func CreateExpense(w http.ResponseWriter, r *http.Request) {
 }
 
 func FindAllExpenses(w http.ResponseWriter, r *http.Request) {
+	userId := utils.UserIdFromContext(r.Context())
 	var expenses []model.ExpenseResponse
-	desc := strings.ToUpper(r.URL.Query().Get("description"))
-	service.ExpenseService.FindAllExpenses(&expenses, desc)
+	description := r.URL.Query().Get("description")
+	service.ExpenseService.FindAllExpenses(&expenses, description, userId)
 	utils.HandleResponse(w, http.StatusOK, expenses)
 }
 
 func FindExpense(w http.ResponseWriter, r *http.Request) {
+	userId := utils.UserIdFromContext(r.Context())
 	var expense model.ExpenseResponse
 	id := uuid.MustParse(mux.Vars(r)["id"])
-	err := service.ExpenseService.FindExpense(&expense, id)
+	err := service.ExpenseService.FindExpense(&expense, id, userId)
 	if err != nil {
 		utils.HandleResponse(w, http.StatusNotFound, struct {
 			Error string
@@ -48,10 +50,11 @@ func FindExpense(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateExpense(w http.ResponseWriter, r *http.Request) {
+	userId := utils.UserIdFromContext(r.Context())
 	var expense model.ExpenseRequest
 	id := uuid.MustParse(mux.Vars(r)["id"])
 	json.NewDecoder(r.Body).Decode(&expense)
-	id, err := service.ExpenseService.UpdateExpense(&expense, id)
+	id, err := service.ExpenseService.UpdateExpense(&expense, id, userId)
 	if err != nil {
 		utils.HandleResponse(w, http.StatusUnprocessableEntity, struct {
 			Error string
@@ -63,15 +66,17 @@ func UpdateExpense(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteExpense(w http.ResponseWriter, r *http.Request) {
+	userId := utils.UserIdFromContext(r.Context())
 	id := uuid.MustParse(mux.Vars(r)["id"])
-	service.ExpenseService.DeleteExpense(id)
+	service.ExpenseService.DeleteExpense(id, userId)
 	utils.HandleResponse(w, http.StatusNoContent, nil)
 }
 
 func ExpensesByPeriod(w http.ResponseWriter, r *http.Request) {
+	userId := utils.UserIdFromContext(r.Context())
 	var expenses []model.ExpenseResponse
 	vars := mux.Vars(r)
-	err := service.ExpenseService.ExpensesByPeriod(&expenses, vars["year"], vars["month"])
+	err := service.ExpenseService.ExpensesByPeriod(&expenses, vars["year"], vars["month"], userId)
 	if err != nil {
 		utils.HandleResponse(w, http.StatusUnprocessableEntity, struct{ Error string }{err.Error()})
 	} else {

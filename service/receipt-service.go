@@ -12,75 +12,82 @@ import (
 	"gorm.io/gorm"
 )
 
-type RreceiptService struct{}
+type receiptService struct{}
 
-var ReceiptService = RreceiptService{}
+var ReceiptService = receiptService{}
 
-func (rs *RreceiptService) CreateReceipt(r *model.Receipt) (uuid.UUID, error) {
+func (rs *receiptService) CreateReceipt(r *model.ReceiptRequest, userId uuid.UUID) (uuid.UUID, error) {
 	var entity *model.Receipt
-	t1, t2, err := utils.MonthInterval(r.Date)
-	if err != nil {
+	isTwice, entityId, err := rs.isMonthDuplicated(r.Date, r.Description, userId)
+	if isTwice {
+		return entityId, errors.New("receipt already created in current month")
+	} else if err != nil {
 		return uuid.Nil, err
-	}
-	tx := database.DB.Where("description = ? AND date between ? AND ?", strings.ToUpper(r.Description), t1, t2).First(&entity)
-	if tx.Error != nil && tx.Error == gorm.ErrRecordNotFound {
-		database.DB.Create(r)
 	} else {
-		return entity.Id, errors.New("receipt already created in current month")
+		entity = &model.Receipt{
+			Description: r.Description,
+			Value:       r.Value,
+			Date:        r.Date,
+			UserId:      userId,
+		}
+		database.DB.Create(entity)
 	}
-	return r.Id, nil
+	return entity.Id, nil
 }
 
-func (rs *RreceiptService) FindAllReceipts(r *[]model.ReceiptResponse, description string) {
+func (rs *receiptService) FindAllReceipts(r *[]model.ReceiptResponse, description string, userId uuid.UUID) error {
 	var receipts []model.Receipt
 	if description != "" {
-		database.DB.Find(&receipts, "description = ?", description)
+		database.DB.Where("user_id = ? AND description = ?", userId, strings.ToUpper(description)).Find(&receipts)
 	} else {
-		database.DB.Find(&receipts)
+		database.DB.Where("user_id = ?", userId).Find(&receipts)
 	}
 	for _, v := range receipts {
 		*r = append(*r, model.ReceiptResponse{
 			Id:          v.Id.String(),
 			Description: v.Description,
 			Value:       v.Value,
-			Date:        v.Date})
-	}
-}
-
-func (rs *RreceiptService) FindReceipt(r *model.ReceiptResponse, id uuid.UUID) error {
-	var receipt model.Receipt
-	tx := database.DB.First(&receipt)
-	if tx.Error != nil && tx.Error == gorm.ErrRecordNotFound {
-		return errors.New("receipt not found")
-	}
-	*r = model.ReceiptResponse{
-		Description: receipt.Description,
-		Value:       receipt.Value,
-		Date:        receipt.Date,
+			Date:        v.Date,
+			UserId:      v.UserId.String(),
+		},
+		)
 	}
 	return nil
 }
 
-func (rs *RreceiptService) UpdateReceipt(r *model.ReceiptRequest, id uuid.UUID) (uuid.UUID, error) {
+func (rs *receiptService) FindReceipt(r *model.ReceiptResponse, receiptId uuid.UUID, userId uuid.UUID) error {
 	var receipt model.Receipt
-	tx := database.DB.First(&receipt, id)
+	tx := database.DB.Where("id = ? AND user_id = ?", receiptId, userId).First(&receipt)
 	if tx.Error != nil && tx.Error == gorm.ErrRecordNotFound {
-		return id, errors.New("receipt not found")
+		return errors.New("receipt not found")
+	}
+	*r = model.ReceiptResponse{
+		Id:          receipt.Id.String(),
+		Description: receipt.Description,
+		Value:       receipt.Value,
+		Date:        receipt.Date,
+		UserId:      receipt.UserId.String(),
+	}
+	return nil
+}
+
+func (rs *receiptService) UpdateReceipt(r *model.ReceiptRequest, receiptId uuid.UUID, userId uuid.UUID) (uuid.UUID, error) {
+	var receipt model.Receipt
+	tx := database.DB.Where("id = ? AND user_id = ?", receiptId, userId).First(&receipt)
+	if tx.Error != nil && tx.Error == gorm.ErrRecordNotFound {
+		return receiptId, errors.New("receipt not found")
 	}
 	if rs.shouldCheckReceiptInCurrentMonth(r, &receipt) {
-		var entity model.Receipt
-		t1, t2, err := utils.MonthInterval(r.Date)
-		if err != nil {
+		isTwice, entityId, err := rs.isMonthDuplicated(r.Date, r.Description, userId)
+		if isTwice {
+			return entityId, fmt.Errorf("receipt %s already created in current month", strings.ToUpper(r.Description))
+		} else if err != nil {
 			return uuid.Nil, err
-		}
-		tx := database.DB.Where("description = ? AND date between ? AND ?", strings.ToUpper(r.Description), t1, t2).First(&entity)
-		if tx.Error != nil && tx.Error == gorm.ErrRecordNotFound {
+		} else {
 			receipt.Date = r.Date
 			receipt.Description = r.Description
 			receipt.Value = r.Value
 			database.DB.Save(&receipt)
-		} else {
-			return entity.Id, fmt.Errorf("receipt %s already created in current month", entity.Description)
 		}
 	} else {
 		receipt.Date = r.Date
@@ -88,39 +95,41 @@ func (rs *RreceiptService) UpdateReceipt(r *model.ReceiptRequest, id uuid.UUID) 
 		receipt.Value = r.Value
 		database.DB.Save(&receipt)
 	}
-	return id, nil
+	return receiptId, nil
 }
 
-func (rs *RreceiptService) DeleteReceipt(id uuid.UUID) {
+func (rs *receiptService) DeleteReceipt(id uuid.UUID, userId uuid.UUID) {
 	var receipt model.Receipt
-	database.DB.Delete(&receipt, id)
+	database.DB.Where("id = ? AND user_id = ?", id, userId).Delete(&receipt)
 }
 
-func (rs *RreceiptService) ReceiptsByPeriod(r *[]model.ReceiptResponse, year string, month string) error {
+func (rs *receiptService) ReceiptsByPeriod(r *[]model.ReceiptResponse, year string, month string, userId uuid.UUID) error {
 	var receipts []model.Receipt
 	t1, t2, err := utils.MonthInterval(fmt.Sprintf("%s-%s", year, month))
 	if err != nil {
 		return err
 	}
-	database.DB.Find(&receipts, "date between ? AND ?", t1, t2)
+	database.DB.Where("user_id = ? AND date between ? AND ?", userId, t1, t2).Find(&receipts)
 	for _, v := range receipts {
 		*r = append(*r, model.ReceiptResponse{
 			Id:          v.Id.String(),
 			Description: v.Description,
 			Value:       v.Value,
 			Date:        v.Date,
-		})
+			UserId:      v.UserId.String(),
+		},
+		)
 	}
 	return nil
 }
 
-func (rs *RreceiptService) TotalReceiptValueByPeriod(year, month string) (float64, error) {
+func (rs *receiptService) TotalReceiptValueByPeriod(year string, month string, userId uuid.UUID) (float64, error) {
 	var receipts []model.Receipt
 	t1, t2, err := utils.MonthInterval(fmt.Sprintf("%s-%s", year, month))
 	if err != nil {
 		return 0, err
 	}
-	database.DB.Find(&receipts, "date between ? AND ?", t1, t2)
+	database.DB.Where("user_id = ? AND date between ? AND ?", userId, t1, t2).Find(&receipts)
 	var total float64
 	for _, v := range receipts {
 		total += v.Value
@@ -128,10 +137,26 @@ func (rs *RreceiptService) TotalReceiptValueByPeriod(year, month string) (float6
 	return total, nil
 }
 
-func (rs *RreceiptService) shouldCheckReceiptInCurrentMonth(receiptRequest *model.ReceiptRequest, receipt *model.Receipt) bool {
-	if receiptRequest.Date != receipt.Date && receiptRequest.Description != receipt.Description {
+func (rs *receiptService) shouldCheckReceiptInCurrentMonth(receiptRequest *model.ReceiptRequest, receipt *model.Receipt) bool {
+	if (receiptRequest.Date != receipt.Date) || (receiptRequest.Description != receipt.Description) {
 		return true
 	} else {
 		return false
+	}
+}
+
+func (rs *receiptService) isMonthDuplicated(date string, description string, userId uuid.UUID) (bool, uuid.UUID, error) {
+	var entity model.Receipt
+	t1, t2, err := utils.MonthInterval(date)
+	if err != nil {
+		return false, uuid.Nil, err
+	}
+	tx := database.DB.Where("user_id = ? AND description = ? AND date between ? AND ?", userId, strings.ToUpper(description), t1, t2).First(&entity)
+	if tx.Error != nil && tx.Error == gorm.ErrRecordNotFound {
+		return false, uuid.Nil, nil
+	} else if tx.Error != nil {
+		return true, uuid.Nil, tx.Error
+	} else {
+		return true, entity.Id, nil
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/RaphaSalomao/alura-challenge-backend/database"
 	"github.com/RaphaSalomao/alura-challenge-backend/model"
 	"github.com/RaphaSalomao/alura-challenge-backend/utils"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -23,12 +24,12 @@ func CreateUser(u *model.UserRequest) error {
 	return nil
 }
 
-func BalanceSumary(bs *model.BalanceSumaryResponse, year string, month string) error {
-	totalReceipt, err := ReceiptService.TotalReceiptValueByPeriod(year, month)
+func BalanceSumary(bs *model.BalanceSumaryResponse, year string, month string, userId uuid.UUID) error {
+	totalReceipt, err := ReceiptService.TotalReceiptValueByPeriod(year, month, userId)
 	if err != nil {
 		return err
 	}
-	totalExpense, categoryBalance, err := ExpenseService.TotalExpenseValueByPeriod(year, month)
+	totalExpense, categoryBalance, err := ExpenseService.TotalExpenseValueByPeriod(year, month, userId)
 	if err != nil {
 		return err
 	}

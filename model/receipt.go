@@ -3,14 +3,16 @@ package model
 import (
 	"strings"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type Receipt struct {
 	Base
-	Description string  `json:"description,omitempty"`
-	Value       float64 `json:"value,omitempty"`
-	Date        string  `json:"date,omitempty"`
+	Description string    `json:"description,omitempty"`
+	Value       float64   `json:"value,omitempty"`
+	Date        string    `json:"date,omitempty"`
+	UserId      uuid.UUID `json:"userId,omitempty"`
 }
 
 type ReceiptRequest struct {
@@ -24,6 +26,7 @@ type ReceiptResponse struct {
 	Description string  `json:"description,omitempty"`
 	Value       float64 `json:"value,omitempty"`
 	Date        string  `json:"date,omitempty"`
+	UserId      string  `json:"userId,omitempty"`
 }
 
 func (r *Receipt) BeforeCreate(tx *gorm.DB) (err error) {

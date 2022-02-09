@@ -1,7 +1,6 @@
 package test_test
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -15,6 +14,7 @@ import (
 	"github.com/RaphaSalomao/alura-challenge-backend/model"
 	"github.com/RaphaSalomao/alura-challenge-backend/model/enum"
 	"github.com/RaphaSalomao/alura-challenge-backend/router"
+	"github.com/RaphaSalomao/alura-challenge-backend/test/factory"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
@@ -35,12 +35,13 @@ func (s *ExpenseControllerSuite) SetupSuite() {
 	s.db = database.DB
 	s.m = database.M
 	s.client = http.Client{}
-	go router.HandleRequests(true)
+	go router.HandleRequests()
 	time.Sleep(2 * time.Second)
 }
 
 func (s *ExpenseControllerSuite) TearDownTest() {
 	s.db.Exec("DELETE FROM expenses")
+	s.db.Exec("DELETE FROM users")
 }
 
 func (s *ExpenseControllerSuite) TearDownSuite() {
@@ -55,19 +56,29 @@ func TestExpenseControllerSuite(t *testing.T) {
 }
 
 func (s *ExpenseControllerSuite) TestCreateExpense_Success() {
-	// create request
-	expect := model.ExpenseRequest{
-		Description: "Taxes",
-		Value:       3000,
-		Date:        "2022-01-25T00:00:00Z",
-		Category:    enum.CategoryHome,
+	// prepare database
+	r := factory.Request{
+		User: model.User{
+			Email:    "email@email.com",
+			Password: "password",
+		},
+		Body: model.ExpenseRequest{
+			Description: "Taxes",
+			Value:       3000,
+			Date:        "2022-01-25T00:00:00Z",
+			Category:    enum.CategoryHome,
+		},
+		Path:   "/budget-control/api/v1/expense",
+		Method: http.MethodPost,
+		DB:     s.db,
+		Client: s.client,
 	}
-	request, err := json.Marshal(expect)
-	s.Require().NoError(err)
-	requestBody := bytes.NewBuffer(request)
+	r.SaveUser()
+	// create request
+	expect := r.Body.(model.ExpenseRequest)
 
 	// do request
-	resp, err := http.Post("http://localhost:8080/budget-control/api/v1/expense", "Application/json", requestBody)
+	resp, err := r.DoRequest()
 	s.Require().NoError(err)
 
 	// get response
@@ -86,18 +97,27 @@ func (s *ExpenseControllerSuite) TestCreateExpense_Success() {
 }
 
 func (s *ExpenseControllerSuite) TestCreateExpenseWithoutCategory_Success() {
-	// create request
-	expect := model.ExpenseRequest{
-		Description: "Taxes",
-		Value:       3000,
-		Date:        "2022-01-25T00:00:00Z",
+	// preapare database
+	r := factory.Request{
+		User: model.User{
+			Email:    "email@email.com",
+			Password: "password",
+		},
+		Body: model.ExpenseRequest{
+			Description: "Taxes",
+			Value:       3000,
+			Date:        "2022-01-25T00:00:00Z",
+		},
+		Path:   "/budget-control/api/v1/expense",
+		Method: http.MethodPost,
+		DB:     s.db,
+		Client: s.client,
 	}
-	request, err := json.Marshal(expect)
-	s.Require().NoError(err)
-	requestBody := bytes.NewBuffer(request)
-
+	r.SaveUser()
+	// create request
+	expect := r.Body.(model.ExpenseRequest)
 	// do request
-	resp, err := http.Post("http://localhost:8080/budget-control/api/v1/expense", "Application/json", requestBody)
+	resp, err := r.DoRequest()
 	s.Require().NoError(err)
 
 	// get response
@@ -117,25 +137,32 @@ func (s *ExpenseControllerSuite) TestCreateExpenseWithoutCategory_Success() {
 
 func (s *ExpenseControllerSuite) TestCreateExpensetWithSameDescriptionInTheMonth_Fail() {
 	// prepare database
+	r := factory.Request{
+		User: model.User{
+			Email:    "email@email.com",
+			Password: "password",
+		},
+		Body: model.ExpenseRequest{
+			Description: "Taxes",
+			Value:       3000,
+			Date:        "2022-01-25T00:00:00Z",
+		},
+		Path:   "/budget-control/api/v1/expense",
+		Method: http.MethodPost,
+		DB:     s.db,
+		Client: s.client,
+	}
+	r.SaveUser()
 	expense := model.Expense{
 		Description: "Taxes",
 		Value:       3000,
 		Date:        "2022-01-20T00:00:00Z",
+		UserId:      r.User.Id,
 	}
 	s.db.Create(&expense)
-	// create request
-	expect := model.ExpenseRequest{
-		Description: "Taxes",
-		Value:       3000,
-		Date:        "2022-01-25T00:00:00Z",
-	}
-	request, err := json.Marshal(expect)
-	s.Require().NoError(err)
-
-	requestBody := bytes.NewBuffer(request)
 
 	// do request
-	resp, err := http.Post("http://localhost:8080/budget-control/api/v1/expense", "Application/json", requestBody)
+	resp, err := r.DoRequest()
 	s.Require().NoError(err)
 
 	// get response
@@ -149,45 +176,71 @@ func (s *ExpenseControllerSuite) TestCreateExpensetWithSameDescriptionInTheMonth
 
 	// assert
 	s.Require().Equal(http.StatusUnprocessableEntity, resp.StatusCode)
-	s.Require().Equal(respBody.Error, "expense already created in current month")
+	s.Require().Equal("expense already created in current month", respBody.Error)
 	s.Require().Equal(expense.Id, got.Id)
 	s.Require().Equal(expense.Description, got.Description)
 }
 
 func (s *ExpenseControllerSuite) TestFindAllExpense_Success() {
 	// prepare database
+	r := factory.Request{
+		User: model.User{
+			Email:    "email@email.com",
+			Password: "password",
+		},
+		Path:   "/budget-control/api/v1/expense",
+		Method: http.MethodGet,
+		DB:     s.db,
+		Client: s.client,
+	}
+	r.SaveUser()
 	expense := model.Expense{
 		Description: "Taxes",
 		Value:       3000,
 		Date:        "2022-01-20T00:00:00Z",
+		UserId:      r.User.Id,
 	}
 	s.db.Create(&expense)
 
 	// do request
-	resp, err := http.Get("http://localhost:8080/budget-control/api/v1/expense")
+	resp, err := r.DoRequest()
 	s.Require().NoError(err)
 
 	var responseBody []model.ExpenseResponse
 	json.NewDecoder(resp.Body).Decode(&responseBody)
 
-	s.Require().Equal(len(responseBody), 1)
+	s.Require().Equal(1, len(responseBody))
 	s.Require().Equal(responseBody[0].Description, expense.Description)
 	s.Require().Equal(enum.CategoryOthers, expense.Category)
+	s.Require().Equal(responseBody[0].Value, expense.Value)
+	s.Require().Equal(responseBody[0].Date, expense.Date)
+	s.Require().Equal(responseBody[0].Id, expense.Id.String())
+	s.Require().Equal(responseBody[0].UserId, expense.UserId.String())
 }
 
 func (s *ExpenseControllerSuite) TestFindExpense_Success() {
 	// prepare database
+	r := factory.Request{
+		User: model.User{
+			Email:    "email@email.com",
+			Password: "password",
+		},
+		Method: http.MethodGet,
+		DB:     s.db,
+		Client: s.client,
+	}
+	r.SaveUser()
 	expense := model.Expense{
 		Description: "Taxes",
 		Value:       3000,
 		Date:        "2022-01-20T00:00:00Z",
 		Category:    enum.CategoryHome,
+		UserId:      r.User.Id,
 	}
 	s.db.Create(&expense)
-
+	r.Path = fmt.Sprintf("/budget-control/api/v1/expense/%s", expense.Id.String())
 	// do request
-	url := fmt.Sprintf("http://localhost:8080/budget-control/api/v1/expense/%s", expense.Id.String())
-	resp, err := http.Get(url)
+	resp, err := r.DoRequest()
 	if err != nil {
 		panic(err)
 	}
@@ -200,53 +253,77 @@ func (s *ExpenseControllerSuite) TestFindExpense_Success() {
 	s.Require().Equal(expense.Description, responseBody.Description)
 	s.Require().Equal(expense.Value, responseBody.Value)
 	s.Require().Equal(expense.Category, responseBody.Category)
+	s.Require().Equal(expense.Id.String(), responseBody.Id)
+	s.Require().Equal(expense.UserId.String(), responseBody.UserId)
 }
 
 func (s *ExpenseControllerSuite) TestUpdateExpense_Success() {
 	// prepare database
+	r := factory.Request{
+		User: model.User{
+			Email:    "email@email.com",
+			Password: "password",
+		},
+		Body: model.ExpenseRequest{
+			Description: "Food",
+			Value:       1000,
+			Date:        "2022-01-01T00:00:00Z",
+			Category:    enum.CategoryFood,
+		},
+		Method: http.MethodPut,
+		DB:     s.db,
+		Client: s.client,
+	}
+	r.SaveUser()
+
+	expect := r.Body.(model.ExpenseRequest)
+
 	expense := model.Expense{
 		Description: "Taxes",
 		Value:       3000,
 		Date:        "2022-01-20T00:00:00Z",
+		UserId:      r.User.Id,
 	}
 	s.db.Create(&expense)
 
-	// prepare request
-	newExpense := model.ExpenseRequest{
-		Description: "Food",
-		Value:       1000,
-		Date:        "2022-01-01T00:00:00Z",
-		Category:    enum.CategoryFood,
-	}
-
-	body, err := json.Marshal(newExpense)
-	s.Require().NoError(err)
-	requestBody := bytes.NewBuffer(body)
-	url := fmt.Sprintf("http://localhost:8080/budget-control/api/v1/expense/%s", expense.Id.String())
-
 	// do request
-	request, err := http.NewRequest(http.MethodPut, url, requestBody)
-	s.Require().NoError(err)
-	request.Header.Set("Content-Type", "application/json")
-	resp, err := s.client.Do(request)
+	r.Path = fmt.Sprintf("/budget-control/api/v1/expense/%s", expense.Id.String())
+	resp, err := r.DoRequest()
 	s.Require().NoError(err)
 	s.Require().Equal(resp.StatusCode, http.StatusNoContent)
 
 	var got model.Expense
 	s.db.Find(&got, expense.Id)
 
-	s.Require().Equal(newExpense.Date, got.Date)
-	s.Require().Equal(strings.ToUpper(newExpense.Description), got.Description)
-	s.Require().Equal(newExpense.Value, got.Value)
-	s.Require().Equal(newExpense.Category, got.Category)
+	s.Require().Equal(expect.Date, got.Date)
+	s.Require().Equal(strings.ToUpper(expect.Description), got.Description)
+	s.Require().Equal(expect.Value, got.Value)
+	s.Require().Equal(expect.Category, got.Category)
 }
 
 func (s *ExpenseControllerSuite) TestUpdateExpenseWithSameDescriptionInTheMonth_Fail() {
 	// prepare database
+	r := factory.Request{
+		User: model.User{
+			Email:    "email@email.com",
+			Password: "password",
+		},
+		Body: model.ExpenseRequest{
+			Description: "New Description",
+			Value:       1000,
+			Date:        "2022-01-01T00:00:00Z",
+		},
+		Method: http.MethodPut,
+		DB:     s.db,
+		Client: s.client,
+	}
+	r.SaveUser()
+
 	expense := model.Expense{
 		Description: "Taxes",
 		Value:       3000,
 		Date:        "2022-01-20T00:00:00Z",
+		UserId:      r.User.Id,
 	}
 	s.db.Create(&expense)
 
@@ -254,6 +331,7 @@ func (s *ExpenseControllerSuite) TestUpdateExpenseWithSameDescriptionInTheMonth_
 		Description: "New Description",
 		Value:       5000,
 		Date:        "2022-01-15T00:00:00Z",
+		UserId:      r.User.Id,
 	}
 	s.db.Create(&inMonthExpense)
 	// prepare request
@@ -263,17 +341,9 @@ func (s *ExpenseControllerSuite) TestUpdateExpenseWithSameDescriptionInTheMonth_
 		Date:        "2022-01-01T00:00:00Z",
 		Category:    enum.CategoryOthers,
 	}
-
-	body, err := json.Marshal(newExpense)
-	s.Require().NoError(err)
-	requestBody := bytes.NewBuffer(body)
-	url := fmt.Sprintf("http://localhost:8080/budget-control/api/v1/expense/%s", expense.Id.String())
-
 	// do request
-	request, err := http.NewRequest(http.MethodPut, url, requestBody)
-	s.Require().NoError(err)
-	request.Header.Set("Content-Type", "application/json")
-	resp, err := s.client.Do(request)
+	r.Path = fmt.Sprintf("/budget-control/api/v1/expense/%s", expense.Id.String())
+	resp, err := r.DoRequest()
 	s.Require().NoError(err)
 	s.Require().Equal(resp.StatusCode, http.StatusUnprocessableEntity)
 
@@ -289,27 +359,36 @@ func (s *ExpenseControllerSuite) TestUpdateExpenseWithSameDescriptionInTheMonth_
 	var got model.Expense
 	s.db.Find(&got, expense.Id)
 
-	s.Require().NotEqual(got.Date, newExpense.Date)
-	s.Require().NotEqual(got.Description, strings.ToUpper(newExpense.Description))
-	s.Require().NotEqual(got.Value, newExpense.Value)
+	s.Require().NotEqual(newExpense.Date, got.Date)
+	s.Require().NotEqual(strings.ToUpper(newExpense.Description), got.Description)
+	s.Require().NotEqual(newExpense.Value, got.Value)
 }
 
 func (s *ExpenseControllerSuite) TestDeleteExpense_Sucess() {
 	// prepare database
+	r := factory.Request{
+		User: model.User{
+			Email:    "email@email.com",
+			Password: "password",
+		},
+		Method: http.MethodDelete,
+		DB:     s.db,
+		Client: s.client,
+	}
+	r.SaveUser()
+
 	expense := model.Expense{
 		Description: "Taxes",
 		Value:       1000,
 		Date:        "2022-01-20T00:00:00Z",
+		UserId:      r.User.Id,
 	}
 	s.db.Create(&expense)
 
 	// prepare request
-	url := fmt.Sprintf("http://localhost:8080/budget-control/api/v1/expense/%s", expense.Id.String())
-	request, err := http.NewRequest(http.MethodDelete, url, nil)
-	s.Require().NoError(err)
-
+	r.Path = fmt.Sprintf("/budget-control/api/v1/expense/%s", expense.Id.String())
 	// do request
-	resp, err := s.client.Do(request)
+	resp, err := r.DoRequest()
 	s.Require().NoError(err)
 
 	s.Require().Equal(http.StatusNoContent, resp.StatusCode)
@@ -320,33 +399,48 @@ func (s *ExpenseControllerSuite) TestDeleteExpense_Sucess() {
 
 func (s *ExpenseControllerSuite) TestExpensesByPeriod_Success() {
 	// prepare database
+	r := factory.Request{
+		User: model.User{
+			Email:    "email@email.com",
+			Password: "password",
+		},
+		Method: http.MethodGet,
+		DB:     s.db,
+		Client: s.client,
+	}
+	r.SaveUser()
+
 	s.db.Create(&[]model.Expense{
 		{
 			Description: "DESC1",
 			Value:       1000,
 			Date:        "2022-01-01T00:00:00Z",
+			UserId:      r.User.Id,
 		},
 		{
 			Description: "DESC2",
 			Value:       1000,
 			Date:        "2022-01-01T00:00:00Z",
+			UserId:      r.User.Id,
 		},
 		{
 			Description: "DESC1",
 			Value:       1000,
 			Date:        "2022-02-01T00:00:00Z",
+			UserId:      r.User.Id,
 		},
 		{
 			Description: "DESC2",
 			Value:       1000,
 			Date:        "2022-02-01T00:00:00Z",
+			UserId:      r.User.Id,
 		},
 	})
 
 	// prepare request
 	year, month := "2022", "01"
-
-	resp, err := http.Get(fmt.Sprintf("http://localhost:8080/budget-control/api/v1/expense/%s/%s", year, month))
+	r.Path = fmt.Sprintf("/budget-control/api/v1/expense/%s/%s", year, month)
+	resp, err := r.DoRequest()
 	s.Require().NoError(err)
 
 	var responseBody []model.Expense
