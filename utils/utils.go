@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/RaphaSalomao/alura-challenge-backend/database"
 	"github.com/RaphaSalomao/alura-challenge-backend/model"
+	"github.com/RaphaSalomao/alura-challenge-backend/model/types"
 	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -76,15 +78,15 @@ func GenerateJWT(email string, id string) (string, error) {
 	return tknString, nil
 }
 
-func ParseToken(tokenString string) error {
+func ParseToken(tokenString string) (string, error) {
 	token, err := jwt.Parse(tokenString, KeyFunc)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if !token.Valid {
-		return errors.New("invalid token")
+		return "", errors.New("invalid token")
 	}
-	return nil
+	return token.Claims.(jwt.MapClaims)["id"].(string), nil
 }
 
 func KeyFunc(t *jwt.Token) (interface{}, error) {
@@ -99,4 +101,8 @@ func KeyFunc(t *jwt.Token) (interface{}, error) {
 		}
 	}
 	return []byte(key), nil
+}
+
+func UserIdFromContext(ctx context.Context) uuid.UUID {
+	return uuid.MustParse(ctx.Value(types.ContextKey("userId")).(string))
 }

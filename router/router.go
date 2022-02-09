@@ -1,6 +1,7 @@
 package router
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -9,12 +10,12 @@ import (
 	"syscall"
 
 	"github.com/RaphaSalomao/alura-challenge-backend/controller"
+	"github.com/RaphaSalomao/alura-challenge-backend/model/types"
 	"github.com/RaphaSalomao/alura-challenge-backend/utils"
 	"github.com/gorilla/mux"
 )
 
 var (
-	PermitAll       bool
 	unauthenticated = map[string]bool{
 		"/budget-control/api/v1/health":       true,
 		"/budget-control/api/v1/user":         true,
@@ -22,8 +23,7 @@ var (
 	}
 )
 
-func HandleRequests(permitAll bool) {
-	PermitAll = permitAll
+func HandleRequests() {
 	router := mux.NewRouter()
 	router.Use(middleware)
 
@@ -62,7 +62,9 @@ func middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("Content-Type", "application/json")
-			if !unauthenticated[r.URL.Path] && !PermitAll {
+			var userId string
+			var err error
+			if !unauthenticated[r.URL.Path] {
 				token := strings.Split(r.Header.Get("Authorization"), " ")
 				if len(token) == 1 && token[0] == "" {
 					utils.HandleResponse(w, http.StatusBadRequest, struct{ Error string }{Error: "missing token"})
@@ -70,11 +72,14 @@ func middleware(next http.Handler) http.Handler {
 				} else if token[0] != "Bearer" || len(token) != 2 {
 					utils.HandleResponse(w, http.StatusBadRequest, struct{ Error string }{Error: "invalid token"})
 					return
-				} else if err := utils.ParseToken(token[1]); err != nil {
+				}
+				userId, err = utils.ParseToken(token[1])
+				if err != nil {
 					utils.HandleResponse(w, http.StatusUnauthorized, struct{ Error string }{Error: err.Error()})
 					return
 				}
 			}
+			r = r.WithContext(context.WithValue(r.Context(), types.ContextKey("userId"), userId))
 			next.ServeHTTP(w, r)
 		},
 	)

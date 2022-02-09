@@ -1,7 +1,6 @@
 package test_test
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -14,6 +13,7 @@ import (
 	"github.com/RaphaSalomao/alura-challenge-backend/database"
 	"github.com/RaphaSalomao/alura-challenge-backend/model"
 	"github.com/RaphaSalomao/alura-challenge-backend/router"
+	"github.com/RaphaSalomao/alura-challenge-backend/test/factory"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
@@ -35,12 +35,13 @@ func (s *ReceiptControllerSuite) SetupSuite() {
 	s.m = database.M
 	s.client = http.Client{}
 
-	go router.HandleRequests(true)
+	go router.HandleRequests()
 	time.Sleep(2 * time.Second)
 }
 
 func (s *ReceiptControllerSuite) TearDownTest() {
 	s.db.Exec("DELETE FROM receipts")
+	s.db.Exec("DELETE FROM users")
 }
 
 func (s *ReceiptControllerSuite) TearDownSuite() {
@@ -55,55 +56,70 @@ func TestReceiptControllerSuite(t *testing.T) {
 }
 
 func (s *ReceiptControllerSuite) TestCreateReceipt_Success() {
-	// create request
-	expect := model.ReceiptRequest{
-		Description: "Salary",
-		Value:       3000,
-		Date:        "2022-01-25T00:00:00Z",
+	r := factory.Request{
+		User: model.User{
+			Email:    "email@email.com",
+			Password: "password",
+		},
+		Body: model.ReceiptRequest{
+			Description: "Salary",
+			Value:       3000,
+			Date:        "2022-01-25T00:00:00Z",
+		},
+		Path:   "/budget-control/api/v1/receipt",
+		Method: http.MethodPost,
+		Client: s.client,
+		DB:     s.db,
 	}
-	request, err := json.Marshal(expect)
-	s.Require().NoError(err)
-	requestBody := bytes.NewBuffer(request)
+	r.SaveUser()
+	expect := r.Body.(model.ReceiptRequest)
 
-	// do request
-	resp, err := http.Post("http://localhost:8080/budget-control/api/v1/receipt", "Application/json", requestBody)
+	resp, err := r.DoRequest()
 	s.Require().NoError(err)
 
-	// get response
 	var respBody struct{ Id uuid.UUID }
 	json.NewDecoder(resp.Body).Decode(&respBody)
+
 	var got model.Receipt
 	s.db.First(&got)
 
 	// assert
 	s.Require().Equal(http.StatusCreated, resp.StatusCode)
-	s.Require().Equal(got.Id, respBody.Id)
-	s.Require().Equal(got.Date, expect.Date)
-	s.Require().Equal(got.Value, expect.Value)
-	s.Require().Equal(got.Description, strings.ToUpper(expect.Description))
+	s.Require().Equal(respBody.Id, got.Id)
+	s.Require().Equal(expect.Date, got.Date)
+	s.Require().Equal(expect.Value, got.Value)
+	s.Require().Equal(strings.ToUpper(expect.Description), got.Description)
+	s.Require().Equal(r.User.Id, got.UserId)
 }
 
 func (s *ReceiptControllerSuite) TestCreateReceiptWithSameDescriptionInTheMonth_Fail() {
 	// prepare database
-	receipt := model.Receipt{
-		Description: "SALARY",
-		Value:       3000,
-		Date:        "2022-01-20T00:00:00Z",
+	r := factory.Request{
+		User: model.User{
+			Email:    "email@email.com",
+			Password: "password",
+		},
+		Body: model.ReceiptRequest{
+			Description: "Salary",
+			Value:       3000,
+			Date:        "2022-01-25T00:00:00Z",
+		},
+		Method: http.MethodPost,
+		Client: s.client,
+		DB:     s.db,
+		Path:   "/budget-control/api/v1/receipt",
 	}
-	s.db.Create(&receipt)
-	// create request
-	expect := model.ReceiptRequest{
+	r.SaveUser()
+
+	receipt := model.Receipt{
 		Description: "Salary",
 		Value:       3000,
-		Date:        "2022-01-25T00:00:00Z",
+		Date:        "2022-01-20T00:00:00Z",
+		UserId:      r.User.Id,
 	}
-	request, err := json.Marshal(expect)
-	s.Require().NoError(err)
+	s.db.Create(&receipt)
 
-	requestBody := bytes.NewBuffer(request)
-
-	// do request
-	resp, err := http.Post("http://localhost:8080/budget-control/api/v1/receipt", "Application/json", requestBody)
+	resp, err := r.DoRequest()
 	s.Require().NoError(err)
 
 	// get response
@@ -117,99 +133,144 @@ func (s *ReceiptControllerSuite) TestCreateReceiptWithSameDescriptionInTheMonth_
 
 	// assert
 	s.Require().Equal(http.StatusUnprocessableEntity, resp.StatusCode)
-	s.Require().Equal(respBody.Error, "receipt already created in current month")
+	s.Require().Equal("receipt already created in current month", respBody.Error)
 	s.Require().Equal(receipt.Id, got.Id)
 	s.Require().Equal(receipt.Description, got.Description)
 }
 
 func (s *ReceiptControllerSuite) TestFindAllReceipt_Success() {
 	// prepare database
+	r := factory.Request{
+		User: model.User{
+			Email:    "email@email.com",
+			Password: "password",
+		},
+		Method: http.MethodGet,
+		Client: s.client,
+		DB:     s.db,
+		Path:   "/budget-control/api/v1/receipt",
+	}
+
+	// do request
+	r.SaveUser()
 	receipt := model.Receipt{
 		Description: "SALARY",
 		Value:       3000,
 		Date:        "2022-01-20T00:00:00Z",
+		UserId:      r.User.Id,
 	}
 	s.db.Create(&receipt)
 
-	// do request
-	resp, err := http.Get("http://localhost:8080/budget-control/api/v1/receipt")
+	resp, err := r.DoRequest()
 	s.Require().NoError(err)
 
 	var responseBody []model.ReceiptResponse
 	json.NewDecoder(resp.Body).Decode(&responseBody)
 
-	s.Require().Equal(len(responseBody), 1)
-	s.Require().Equal(responseBody[0].Description, receipt.Description)
+	s.Require().Equal(1, len(responseBody))
+	s.Require().Equal(receipt.Description, responseBody[0].Description)
+	s.Require().Equal(receipt.Value, responseBody[0].Value)
+	s.Require().Equal(receipt.Date, responseBody[0].Date)
+	s.Require().Equal(receipt.Id.String(), responseBody[0].Id)
+	s.Require().Equal(r.User.Id.String(), responseBody[0].UserId)
 }
 
 func (s *ReceiptControllerSuite) TestFindReceipt_Success() {
 	// prepare database
+	r := factory.Request{
+		User: model.User{
+			Email:    "email@email.com",
+			Password: "password",
+		},
+		Method: http.MethodGet,
+		Client: s.client,
+		DB:     s.db,
+	}
+	r.SaveUser()
 	receipt := model.Receipt{
 		Description: "SALARY",
 		Value:       3000,
 		Date:        "2022-01-20T00:00:00Z",
+		UserId:      r.User.Id,
 	}
 	s.db.Create(&receipt)
+	r.Path = fmt.Sprintf("/budget-control/api/v1/receipt/%s", receipt.Id.String())
 
 	// do request
-	url := fmt.Sprintf("http://localhost:8080/budget-control/api/v1/receipt/%s", receipt.Id.String())
-	resp, err := http.Get(url)
-	if err != nil {
-		panic(err)
-	}
+	resp, err := r.DoRequest()
 	s.Require().NoError(err)
 
 	var responseBody model.ReceiptResponse
 	json.NewDecoder(resp.Body).Decode(&responseBody)
 
-	s.Require().Equal(responseBody.Date, receipt.Date)
-	s.Require().Equal(responseBody.Description, receipt.Description)
-	s.Require().Equal(responseBody.Value, receipt.Value)
+	s.Require().Equal(receipt.Date, responseBody.Date)
+	s.Require().Equal(receipt.Description, responseBody.Description)
+	s.Require().Equal(receipt.Value, responseBody.Value)
+	s.Require().Equal(receipt.Id.String(), responseBody.Id)
+	s.Require().Equal(receipt.UserId.String(), responseBody.UserId)
 }
 
 func (s *ReceiptControllerSuite) TestUpdateReceipt_Success() {
 	// prepare database
+	r := factory.Request{
+		User: model.User{
+			Email:    "email@email.com",
+			Password: "password",
+		},
+		Method: http.MethodPut,
+		Client: s.client,
+		DB:     s.db,
+		Body: model.ReceiptRequest{
+			Description: "SALARY",
+			Value:       3000,
+			Date:        "2022-01-20T00:00:00Z",
+		},
+	}
+	r.SaveUser()
 	receipt := model.Receipt{
-		Description: "SALARY",
+		Description: "BONUS",
 		Value:       3000,
-		Date:        "2022-01-20T00:00:00Z",
+		Date:        "2022-01-25T00:00:00Z",
+		UserId:      r.User.Id,
 	}
 	s.db.Create(&receipt)
 
-	// prepare request
-	newReceipt := model.ReceiptRequest{
-		Description: "New Description",
-		Value:       1000,
-		Date:        "2022-01-01T00:00:00Z",
-	}
-
-	body, err := json.Marshal(newReceipt)
+	r.Path = fmt.Sprintf("/budget-control/api/v1/receipt/%s", receipt.Id.String())
+	resp, err := r.DoRequest()
 	s.Require().NoError(err)
-	requestBody := bytes.NewBuffer(body)
-	url := fmt.Sprintf("http://localhost:8080/budget-control/api/v1/receipt/%s", receipt.Id.String())
-
-	// do request
-	request, err := http.NewRequest(http.MethodPut, url, requestBody)
-	s.Require().NoError(err)
-	request.Header.Set("Content-Type", "application/json")
-	resp, err := s.client.Do(request)
-	s.Require().NoError(err)
-	s.Require().Equal(resp.StatusCode, http.StatusNoContent)
+	s.Require().Equal(http.StatusNoContent, resp.StatusCode)
 
 	var got model.Receipt
 	s.db.Find(&got, receipt.Id)
 
-	s.Require().Equal(got.Date, newReceipt.Date)
-	s.Require().Equal(got.Description, strings.ToUpper(newReceipt.Description))
-	s.Require().Equal(got.Value, newReceipt.Value)
+	s.Require().Equal(r.Body.(model.ReceiptRequest).Date, got.Date)
+	s.Require().Equal(strings.ToUpper(r.Body.(model.ReceiptRequest).Description), got.Description)
+	s.Require().Equal(r.Body.(model.ReceiptRequest).Value, got.Value)
 }
 
 func (s *ReceiptControllerSuite) TestUpdateReceiptWithSameDescriptionInTheMonth_Fail() {
 	// prepare database
+	r := factory.Request{
+		User: model.User{
+			Email:    "email@email.com",
+			Password: "password",
+		},
+		Method: http.MethodPut,
+		Client: s.client,
+		DB:     s.db,
+		Body: model.ReceiptRequest{
+			Description: "New Description",
+			Value:       3100,
+			Date:        "2022-01-22T00:00:00Z",
+		},
+	}
+	r.SaveUser()
+
 	receipt := model.Receipt{
 		Description: "SALARY",
 		Value:       3000,
 		Date:        "2022-01-20T00:00:00Z",
+		UserId:      r.User.Id,
 	}
 	s.db.Create(&receipt)
 
@@ -217,25 +278,13 @@ func (s *ReceiptControllerSuite) TestUpdateReceiptWithSameDescriptionInTheMonth_
 		Description: "New Description",
 		Value:       5000,
 		Date:        "2022-01-15T00:00:00Z",
+		UserId:      r.User.Id,
 	}
 	s.db.Create(&inMonthReceipt)
-	// prepare request
-	newReceipt := model.ReceiptRequest{
-		Description: "NEW DESCRIPTION",
-		Value:       1000,
-		Date:        "2022-01-01T00:00:00Z",
-	}
-
-	body, err := json.Marshal(newReceipt)
-	s.Require().NoError(err)
-	requestBody := bytes.NewBuffer(body)
-	url := fmt.Sprintf("http://localhost:8080/budget-control/api/v1/receipt/%s", receipt.Id.String())
 
 	// do request
-	request, err := http.NewRequest(http.MethodPut, url, requestBody)
-	s.Require().NoError(err)
-	request.Header.Set("Content-Type", "application/json")
-	resp, err := s.client.Do(request)
+	r.Path = fmt.Sprintf("/budget-control/api/v1/receipt/%s", receipt.Id.String())
+	resp, err := r.DoRequest()
 	s.Require().NoError(err)
 	s.Require().Equal(http.StatusUnprocessableEntity, resp.StatusCode)
 
@@ -245,33 +294,42 @@ func (s *ReceiptControllerSuite) TestUpdateReceiptWithSameDescriptionInTheMonth_
 	}
 	json.NewDecoder(resp.Body).Decode(&responseBody)
 
-	s.Require().Equal(responseBody.Id, inMonthReceipt.Id)
-	s.Require().Equal(responseBody.Error, fmt.Sprintf("receipt %s already created in current month", inMonthReceipt.Description))
+	s.Require().Equal(inMonthReceipt.Id, responseBody.Id)
+	s.Require().Equal(fmt.Sprintf("receipt %s already created in current month", inMonthReceipt.Description), responseBody.Error)
 
 	var got model.Receipt
 	s.db.Find(&got, receipt.Id)
 
-	s.Require().NotEqual(got.Date, newReceipt.Date)
-	s.Require().NotEqual(got.Description, strings.ToUpper(newReceipt.Description))
-	s.Require().NotEqual(got.Value, newReceipt.Value)
+	s.Require().NotEqual(r.Body.(model.ReceiptRequest).Date, got.Date)
+	s.Require().NotEqual(strings.ToUpper(r.Body.(model.ReceiptRequest).Description), got.Description)
+	s.Require().NotEqual(r.Body.(model.ReceiptRequest).Value, got.Value)
 }
 
 func (s *ReceiptControllerSuite) TestDeleteReceipt_Sucess() {
 	// prepare database
+	r := factory.Request{
+		User: model.User{
+			Email:    "email@email.com",
+			Password: "password",
+		},
+		Method: http.MethodDelete,
+		Client: s.client,
+		DB:     s.db,
+	}
+	r.SaveUser()
 	receipt := model.Receipt{
 		Description: "SALARY",
 		Value:       1000,
 		Date:        "2022-01-20T00:00:00Z",
+		UserId:      r.User.Id,
 	}
 	s.db.Create(&receipt)
 
 	// prepare request
-	url := fmt.Sprintf("http://localhost:8080/budget-control/api/v1/receipt/%s", receipt.Id.String())
-	request, err := http.NewRequest(http.MethodDelete, url, nil)
-	s.Require().NoError(err)
+	r.Path = fmt.Sprintf("/budget-control/api/v1/receipt/%s", receipt.Id.String())
 
 	// do request
-	resp, err := s.client.Do(request)
+	resp, err := r.DoRequest()
 	s.Require().NoError(err)
 
 	s.Require().Equal(http.StatusNoContent, resp.StatusCode)
@@ -282,37 +340,53 @@ func (s *ReceiptControllerSuite) TestDeleteReceipt_Sucess() {
 
 func (s *ReceiptControllerSuite) TestReceiptsByPeriod_Success() {
 	// prepare database
+	r := factory.Request{
+		User: model.User{
+			Email:    "email@email.com",
+			Password: "password",
+		},
+		Method: http.MethodGet,
+		Client: s.client,
+		DB:     s.db,
+	}
+	r.SaveUser()
+
 	s.db.Create(&[]model.Receipt{
 		{
 			Description: "DESC1",
 			Value:       1000,
 			Date:        "2022-01-01T00:00:00Z",
+			UserId:      r.User.Id,
 		},
 		{
 			Description: "DESC2",
 			Value:       1000,
 			Date:        "2022-01-01T00:00:00Z",
+			UserId:      r.User.Id,
 		},
 		{
 			Description: "DESC1",
 			Value:       1000,
 			Date:        "2022-02-01T00:00:00Z",
+			UserId:      r.User.Id,
 		},
 		{
 			Description: "DESC2",
 			Value:       1000,
 			Date:        "2022-02-01T00:00:00Z",
+			UserId:      r.User.Id,
 		},
 	})
 
 	// prepare request
 	year, month := "2022", "01"
-
-	resp, err := http.Get(fmt.Sprintf("http://localhost:8080/budget-control/api/v1/receipt/%s/%s", year, month))
+	r.Path = fmt.Sprintf("/budget-control/api/v1/receipt/%s/%s", year, month)
+	resp, err := r.DoRequest()
 	s.Require().NoError(err)
 
 	var responseBody []model.Receipt
 	json.NewDecoder(resp.Body).Decode(&responseBody)
 
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
 	s.Require().Equal(2, len(responseBody))
 }
