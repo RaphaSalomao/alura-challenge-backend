@@ -12,12 +12,13 @@ import (
 )
 
 type Request struct {
-	Method   string
-	Path     string
-	Body     interface{}
-	User     model.User
-	DB       *gorm.DB
-	Client   http.Client
+	Method string
+	Path   string
+	Body   interface{}
+	User   model.User
+	DB     *gorm.DB
+	Client http.Client
+	Port   string
 }
 
 func (r *Request) DoRequest() (*http.Response, error) {
@@ -33,7 +34,7 @@ func (r *Request) DoRequest() (*http.Response, error) {
 	}
 	body := bytes.NewBuffer(requestBytes)
 
-	url := fmt.Sprintf("http://localhost:8080%s", r.Path)
+	url := fmt.Sprintf("http://localhost:%s%s", r.Port, r.Path)
 	req, err := http.NewRequest(r.Method, url, body)
 	if err != nil {
 		return nil, err

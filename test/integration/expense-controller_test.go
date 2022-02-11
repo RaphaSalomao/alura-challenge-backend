@@ -27,6 +27,7 @@ type ExpenseControllerSuite struct {
 	db     *gorm.DB
 	m      *migrate.Migrate
 	client http.Client
+	port  string
 }
 
 func (s *ExpenseControllerSuite) SetupSuite() {
@@ -35,6 +36,8 @@ func (s *ExpenseControllerSuite) SetupSuite() {
 	s.db = database.DB
 	s.m = database.M
 	s.client = http.Client{}
+	s.port = os.Getenv("SRV_PORT")
+
 	go router.HandleRequests()
 	time.Sleep(2 * time.Second)
 }
@@ -72,6 +75,7 @@ func (s *ExpenseControllerSuite) TestCreateExpense_Success() {
 		Method: http.MethodPost,
 		DB:     s.db,
 		Client: s.client,
+		Port:   s.port,
 	}
 	r.SaveUser()
 	// create request
@@ -112,6 +116,7 @@ func (s *ExpenseControllerSuite) TestCreateExpenseWithoutCategory_Success() {
 		Method: http.MethodPost,
 		DB:     s.db,
 		Client: s.client,
+		Port:  s.port,
 	}
 	r.SaveUser()
 	// create request
@@ -151,6 +156,7 @@ func (s *ExpenseControllerSuite) TestCreateExpensetWithSameDescriptionInTheMonth
 		Method: http.MethodPost,
 		DB:     s.db,
 		Client: s.client,
+		Port:   s.port,
 	}
 	r.SaveUser()
 	expense := model.Expense{
@@ -192,6 +198,7 @@ func (s *ExpenseControllerSuite) TestFindAllExpense_Success() {
 		Method: http.MethodGet,
 		DB:     s.db,
 		Client: s.client,
+		Port:   s.port,
 	}
 	r.SaveUser()
 	expense := model.Expense{
@@ -228,6 +235,7 @@ func (s *ExpenseControllerSuite) TestFindExpense_Success() {
 		Method: http.MethodGet,
 		DB:     s.db,
 		Client: s.client,
+		Port:   s.port,
 	}
 	r.SaveUser()
 	expense := model.Expense{
@@ -273,6 +281,7 @@ func (s *ExpenseControllerSuite) TestUpdateExpense_Success() {
 		Method: http.MethodPut,
 		DB:     s.db,
 		Client: s.client,
+		Port:   s.port,
 	}
 	r.SaveUser()
 
@@ -316,6 +325,7 @@ func (s *ExpenseControllerSuite) TestUpdateExpenseWithSameDescriptionInTheMonth_
 		Method: http.MethodPut,
 		DB:     s.db,
 		Client: s.client,
+		Port:   s.port,
 	}
 	r.SaveUser()
 
@@ -374,6 +384,7 @@ func (s *ExpenseControllerSuite) TestDeleteExpense_Sucess() {
 		Method: http.MethodDelete,
 		DB:     s.db,
 		Client: s.client,
+		Port:   s.port,
 	}
 	r.SaveUser()
 
@@ -407,6 +418,7 @@ func (s *ExpenseControllerSuite) TestExpensesByPeriod_Success() {
 		Method: http.MethodGet,
 		DB:     s.db,
 		Client: s.client,
+		Port:   s.port,
 	}
 	r.SaveUser()
 

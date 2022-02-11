@@ -25,8 +25,9 @@ import (
 
 type ControllerSuite struct {
 	suite.Suite
-	db *gorm.DB
-	m  *migrate.Migrate
+	db   *gorm.DB
+	m    *migrate.Migrate
+	port string
 }
 
 func (s *ControllerSuite) SetupSuite() {
@@ -34,7 +35,7 @@ func (s *ControllerSuite) SetupSuite() {
 	s.Require().NoError(database.Connect())
 	s.db = database.DB
 	s.m = database.M
-
+	s.port = os.Getenv("SRV_PORT")
 	go router.HandleRequests()
 	time.Sleep(2 * time.Second)
 }
@@ -56,7 +57,7 @@ func TestControllerSuite(t *testing.T) {
 	suite.Run(t, new(ControllerSuite))
 }
 func (s *ControllerSuite) TestHealthCheck_Success() {
-	resp, err := http.Get("http://localhost:8080/budget-control/api/v1/health")
+	resp, err := http.Get("http://localhost:5000/budget-control/api/v1/health")
 	s.Require().NoError(err)
 	defer resp.Body.Close()
 
@@ -78,6 +79,7 @@ func (s *ControllerSuite) TestMonthBalanceSumary_Success() {
 		Method: http.MethodGet,
 		DB:     s.db,
 		Client: http.Client{},
+		Port:   s.port,
 	}
 	r.SaveUser()
 
@@ -177,7 +179,7 @@ func (s *ControllerSuite) TestCreateUser_Success() {
 	requestBody := bytes.NewBuffer(request)
 
 	// do request
-	resp, err := http.Post("http://localhost:8080/budget-control/api/v1/user", "application/json", requestBody)
+	resp, err := http.Post("http://localhost:5000/budget-control/api/v1/user", "application/json", requestBody)
 
 	// assert response
 	s.Require().NoError(err)
@@ -210,7 +212,7 @@ func (s *ControllerSuite) TestAuthenticate_Success() {
 	requestBody := bytes.NewBuffer(request)
 
 	// do request
-	resp, err := http.Post("http://localhost:8080/budget-control/api/v1/authenticate", "application/json", requestBody)
+	resp, err := http.Post("http://localhost:5000/budget-control/api/v1/authenticate", "application/json", requestBody)
 	s.Require().NoError(err)
 
 	var tokenResponse struct{ Token string }
@@ -236,7 +238,7 @@ func (s *ControllerSuite) TestAuthenticate_Fail() {
 	requestBody := bytes.NewBuffer(request)
 
 	// do request
-	resp, err := http.Post("http://localhost:8080/budget-control/api/v1/authenticate", "application/json", requestBody)
+	resp, err := http.Post("http://localhost:5000/budget-control/api/v1/authenticate", "application/json", requestBody)
 
 	var tokenResponse struct{ Token string }
 	json.NewDecoder(resp.Body).Decode(&tokenResponse)
