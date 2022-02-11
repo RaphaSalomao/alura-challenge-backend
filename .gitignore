@@ -4,7 +4,8 @@
 *.dll
 *.so
 *.dylib
-alura-challenge-backend
+*.zip
+
 # Test binary, built with `go test -c`
 *.test
 

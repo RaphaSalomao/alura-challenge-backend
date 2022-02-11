@@ -26,6 +26,7 @@ type ReceiptControllerSuite struct {
 	db     *gorm.DB
 	m      *migrate.Migrate
 	client http.Client
+	port   string
 }
 
 func (s *ReceiptControllerSuite) SetupSuite() {
@@ -34,6 +35,7 @@ func (s *ReceiptControllerSuite) SetupSuite() {
 	s.db = database.DB
 	s.m = database.M
 	s.client = http.Client{}
+	s.port = os.Getenv("SRV_PORT")
 
 	go router.HandleRequests()
 	time.Sleep(2 * time.Second)
@@ -70,6 +72,7 @@ func (s *ReceiptControllerSuite) TestCreateReceipt_Success() {
 		Method: http.MethodPost,
 		Client: s.client,
 		DB:     s.db,
+		Port:   s.port,
 	}
 	r.SaveUser()
 	expect := r.Body.(model.ReceiptRequest)
@@ -108,6 +111,7 @@ func (s *ReceiptControllerSuite) TestCreateReceiptWithSameDescriptionInTheMonth_
 		Client: s.client,
 		DB:     s.db,
 		Path:   "/budget-control/api/v1/receipt",
+		Port:   s.port,
 	}
 	r.SaveUser()
 
@@ -149,6 +153,7 @@ func (s *ReceiptControllerSuite) TestFindAllReceipt_Success() {
 		Client: s.client,
 		DB:     s.db,
 		Path:   "/budget-control/api/v1/receipt",
+		Port:   s.port,
 	}
 
 	// do request
@@ -185,6 +190,7 @@ func (s *ReceiptControllerSuite) TestFindReceipt_Success() {
 		Method: http.MethodGet,
 		Client: s.client,
 		DB:     s.db,
+		Port:   s.port,
 	}
 	r.SaveUser()
 	receipt := model.Receipt{
@@ -225,6 +231,7 @@ func (s *ReceiptControllerSuite) TestUpdateReceipt_Success() {
 			Value:       3000,
 			Date:        "2022-01-20T00:00:00Z",
 		},
+		Port: s.port,
 	}
 	r.SaveUser()
 	receipt := model.Receipt{
@@ -263,6 +270,7 @@ func (s *ReceiptControllerSuite) TestUpdateReceiptWithSameDescriptionInTheMonth_
 			Value:       3100,
 			Date:        "2022-01-22T00:00:00Z",
 		},
+		Port:  s.port,
 	}
 	r.SaveUser()
 
@@ -315,6 +323,7 @@ func (s *ReceiptControllerSuite) TestDeleteReceipt_Sucess() {
 		Method: http.MethodDelete,
 		Client: s.client,
 		DB:     s.db,
+		Port:  s.port,
 	}
 	r.SaveUser()
 	receipt := model.Receipt{
@@ -348,6 +357,7 @@ func (s *ReceiptControllerSuite) TestReceiptsByPeriod_Success() {
 		Method: http.MethodGet,
 		Client: s.client,
 		DB:     s.db,
+		Port:  s.port,
 	}
 	r.SaveUser()
 

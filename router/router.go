@@ -24,6 +24,8 @@ var (
 )
 
 func HandleRequests() {
+	srvPort := fmt.Sprintf(":%s", os.Getenv("SRV_PORT"))
+
 	router := mux.NewRouter()
 	router.Use(middleware)
 
@@ -47,7 +49,7 @@ func HandleRequests() {
 
 	router.HandleFunc("/budget-control/api/v1/summary/{year}/{month}", controller.MonthBalanceSumary).Methods("GET")
 
-	go http.ListenAndServe(":8080", router)
+	go http.ListenAndServe(srvPort, router)
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
