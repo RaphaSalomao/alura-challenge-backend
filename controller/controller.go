@@ -56,7 +56,7 @@ func Authenticate(w http.ResponseWriter, r *http.Request) {
 
 // Month Balance Sumary
 // @Description get month balance sumary
-// @Tags Balance
+// @Tags Sumary
 // @Param year path string true "Year"
 // @Param month path string true "Month"
 // @Success 200 {object} model.BalanceSumaryResponse

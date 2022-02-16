@@ -12,6 +12,15 @@ jobs:
     - name: Checkout source code
       uses: actions/checkout@v2
 
+    - name: Get swaggo
+      run: go get -u github.com/swaggo/swag/cmd/swag
+
+    - name: Install swaggo
+      run: go install github.com/swaggo/swag/cmd/swag@latest
+
+    - name: Generate swagger
+      run: swag init -g application.go 
+
     - name: Generate deployment package
       run: zip -r deploy.zip . -x '*.git*'
 

@@ -8,7 +8,7 @@ import (
 )
 
 // @title     Alura Backend Challenge 2nd Edition API
-// @version   1.0.0
+// @version   1.0.1
 // @host      http://alurachallengebackend2ndedition-env.eba-cmaxmrtx.us-east-2.elasticbeanstalk.com
 // @BasePath  /
 func main() {
