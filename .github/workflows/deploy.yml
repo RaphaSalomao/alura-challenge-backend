@@ -31,6 +31,6 @@ jobs:
         aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         application_name: alura-challenge-backend-2nd-edition
         environment_name:  Alurachallengebackend2ndedition-env
-        version_label: alura-challenge-backend-2nd-edition-source-7
+        version_label: alura-challenge-backend-2nd-edition-source-8
         region: us-east-2
         deployment_package: deploy.zip
