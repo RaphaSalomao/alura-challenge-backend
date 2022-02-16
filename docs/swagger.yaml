@@ -68,7 +68,7 @@ definitions:
       password:
         type: string
     type: object
-host: localhost:5000
+host: http://alurachallengebackend2ndedition-env.eba-cmaxmrtx.us-east-2.elasticbeanstalk.com
 info:
   contact: {}
   title: Alura Backend Challenge 2nd Edition API
