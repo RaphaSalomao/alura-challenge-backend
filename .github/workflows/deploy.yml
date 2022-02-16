@@ -14,8 +14,8 @@ jobs:
 
     - name: Generate swagger
       run: wget https://github.com/swaggo/swag/releases/download/v1.7.9-p1/swag_1.7.9-p1_Linux_x86_64.tar.gz 
-        \tar -xf swag_1.7.9-p1_Linux_x86_64.tar.gz 
-        \./swag init -g application.go  
+        \&& tar -xf swag_1.7.9-p1_Linux_x86_64.tar.gz 
+        \&& ./swag init -g application.go  
 
     - name: Generate deployment package
       run: zip -r deploy.zip . -x '*.git*'
