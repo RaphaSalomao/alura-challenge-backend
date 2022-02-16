@@ -2,6 +2,7 @@
 
 #server
 export SRV_PORT=5000
+export SRV_HOST=localhost
 
 #database connection
 export DB_HOST=localhost

@@ -8,3 +8,6 @@ unset DB_PASSWORD
 unset DB_SSLMODE
 
 unset M_PATH
+
+unset SRV_HOST
+unset SRV_PORT
