@@ -16,7 +16,7 @@ jobs:
       run: go get -u github.com/swaggo/swag/cmd/swag
 
     - name: Install swaggo
-      run: go install github.com/swaggo/swag/cmd/swag@latest
+      run: go install github.com/swaggo/swag/cmd/swag
 
     - name: Generate swagger
       run: swag init -g application.go 
