@@ -12,10 +12,14 @@ jobs:
     - name: Checkout source code
       uses: actions/checkout@v2
 
-    - name: Generate swagger
+    - name: Get swagger binary
       run: wget https://github.com/swaggo/swag/releases/download/v1.7.9-p1/swag_1.7.9-p1_Linux_x86_64.tar.gz 
-        \&& tar -xf swag_1.7.9-p1_Linux_x86_64.tar.gz 
-        \&& ./swag init -g application.go  
+
+    - name: Unzip swagger binary
+      run: tar -xvf swag_1.7.9-p1_Linux_x86_64.tar.gz
+
+    - name: Build swagger
+      run: ./swag init -g application.go
 
     - name: Generate deployment package
       run: zip -r deploy.zip . -x '*.git*'
