@@ -10,17 +10,12 @@ import (
 	"syscall"
 
 	"github.com/RaphaSalomao/alura-challenge-backend/controller"
+	_ "github.com/RaphaSalomao/alura-challenge-backend/docs"
 	"github.com/RaphaSalomao/alura-challenge-backend/model/types"
 	"github.com/RaphaSalomao/alura-challenge-backend/utils"
 	"github.com/gorilla/mux"
-)
 
-var (
-	unauthenticated = map[string]bool{
-		"/budget-control/api/v1/health":       true,
-		"/budget-control/api/v1/user":         true,
-		"/budget-control/api/v1/authenticate": true,
-	}
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 func HandleRequests() {
@@ -33,6 +28,12 @@ func HandleRequests() {
 	router.HandleFunc("/budget-control/api/v1/user", controller.CreateUser).Methods("POST")
 	router.HandleFunc("/budget-control/api/v1/authenticate", controller.Authenticate).Methods("POST")
 
+	router.PathPrefix("/swagger/").Handler(httpSwagger.Handler(
+		httpSwagger.URL(fmt.Sprintf("http://localhost%s/swagger/doc.json", srvPort)), //The url pointing to API definition
+		httpSwagger.DeepLinking(true),
+		httpSwagger.DocExpansion("none"),
+		httpSwagger.DomID("#swagger-ui"),
+	))
 	router.HandleFunc("/budget-control/api/v1/receipt", controller.CreateReceipt).Methods("POST")
 	router.HandleFunc("/budget-control/api/v1/receipt", controller.FindAllReceipts).Methods("GET")
 	router.HandleFunc("/budget-control/api/v1/receipt/{id}", controller.FindReceipt).Methods("GET")
@@ -66,7 +67,7 @@ func middleware(next http.Handler) http.Handler {
 			w.Header().Add("Content-Type", "application/json")
 			var userId string
 			var err error
-			if !unauthenticated[r.URL.Path] {
+			if utils.NeedAuthentication(r.URL.Path) {
 				token := strings.Split(r.Header.Get("Authorization"), " ")
 				if len(token) == 1 && token[0] == "" {
 					utils.HandleResponse(w, http.StatusBadRequest, struct{ Error string }{Error: "missing token"})

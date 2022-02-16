@@ -5,6 +5,7 @@
 *.so
 *.dylib
 *.zip
+swag
 
 # Test binary, built with `go test -c`
 *.test
