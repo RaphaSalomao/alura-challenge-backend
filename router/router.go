@@ -65,6 +65,7 @@ func middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("Content-Type", "application/json")
+			w.Header().Add("Access-Control-Allow-Origin", "*")
 			var userId string
 			var err error
 			if utils.NeedAuthentication(r.URL.Path) {
