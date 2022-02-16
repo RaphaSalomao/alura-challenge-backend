@@ -19,7 +19,13 @@ import (
 )
 
 var (
-	key = []byte("0sQPpmdBGjDHKXb18jNh")
+	key             = []byte("0sQPpmdBGjDHKXb18jNh")
+	unauthenticated = []string{
+		"/budget-control/api/v1/health",
+		"/budget-control/api/v1/user",
+		"/budget-control/api/v1/authenticate",
+		"/swagger/",
+	}
 )
 
 func HandleResponse(w http.ResponseWriter, status int, i interface{}) {
@@ -69,7 +75,7 @@ func GenerateJWT(email string, id string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"email": email,
 		"id":    id,
-		"exp":   time.Now().Add(time.Minute * 3).Unix(),
+		"exp":   time.Now().Add(time.Hour * 24).Unix(),
 	})
 	tknString, err := token.SignedString([]byte(key))
 	if err != nil {
@@ -105,4 +111,16 @@ func KeyFunc(t *jwt.Token) (interface{}, error) {
 
 func UserIdFromContext(ctx context.Context) uuid.UUID {
 	return uuid.MustParse(ctx.Value(types.ContextKey("userId")).(string))
+}
+
+func NeedAuthentication(path string) bool {
+	var needAuth bool = true
+	for _, unauthenticatedPath := range unauthenticated {
+
+		if strings.Contains(path, unauthenticatedPath) {
+			needAuth = false
+			break
+		}
+	}
+	return needAuth
 }

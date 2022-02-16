@@ -1,0 +1,542 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "title": "Alura Backend Challenge 2nd Edition API",
+        "contact": {},
+        "version": "1.0.0"
+    },
+    "host": "localhost:5000",
+    "basePath": "/",
+    "paths": {
+        "/budget-control/api/v1/authenticate": {
+            "post": {
+                "description": "authenticate user",
+                "tags": [
+                    "User"
+                ],
+                "parameters": [
+                    {
+                        "description": "User",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "token",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/budget-control/api/v1/balance/{year}/{month}": {
+            "get": {
+                "description": "get month balance sumary",
+                "tags": [
+                    "Balance"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Year",
+                        "name": "year",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Month",
+                        "name": "month",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.BalanceSumaryResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/budget-control/api/v1/expense": {
+            "get": {
+                "description": "Find all expenses",
+                "tags": [
+                    "Expenses"
+                ],
+                "summary": "Find all expenses",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.ExpenseResponse"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create a new expense",
+                "tags": [
+                    "Expenses"
+                ],
+                "summary": "Create a new expense",
+                "parameters": [
+                    {
+                        "description": "Expense",
+                        "name": "expense",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.ExpenseRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/budget-control/api/v1/expense/{id}": {
+            "get": {
+                "description": "Find expense by id",
+                "tags": [
+                    "Expenses"
+                ],
+                "summary": "Find expense by id",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Expense ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.ExpenseResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Update an expense",
+                "tags": [
+                    "Expenses"
+                ],
+                "summary": "Update an expense",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Expense ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Expense",
+                        "name": "expense",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.ExpenseRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": ""
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete an expense",
+                "tags": [
+                    "Expenses"
+                ],
+                "summary": "Delete an expense",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Expense ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/budget-control/api/v1/expense/{year}/{month}": {
+            "get": {
+                "description": "Find all expenses by period",
+                "tags": [
+                    "Expenses"
+                ],
+                "summary": "Find all expenses by period",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Year",
+                        "name": "year",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Month",
+                        "name": "month",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.ExpenseResponse"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/budget-control/api/v1/health": {
+            "get": {
+                "description": "return server status",
+                "tags": [
+                    "Health"
+                ],
+                "responses": {
+                    "200": {
+                        "description": ""
+                    },
+                    "404": {
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/budget-control/api/v1/receipt": {
+            "get": {
+                "description": "Find all receipts",
+                "tags": [
+                    "Receipts"
+                ],
+                "summary": "Find all receipts",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.ReceiptResponse"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create a new receipt",
+                "tags": [
+                    "Receipts"
+                ],
+                "summary": "Create a new receipt",
+                "parameters": [
+                    {
+                        "description": "Receipt",
+                        "name": "receipt",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.ReceiptRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/budget-control/api/v1/receipt/{id}": {
+            "get": {
+                "description": "Find a receipt by id",
+                "tags": [
+                    "Receipts"
+                ],
+                "summary": "Find a receipt by id",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Receipt id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.ReceiptResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Update a receipt",
+                "tags": [
+                    "Receipts"
+                ],
+                "summary": "Update a receipt",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Receipt id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Receipt",
+                        "name": "receipt",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.ReceiptRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete a receipt",
+                "tags": [
+                    "Receipts"
+                ],
+                "summary": "Delete a receipt",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Receipt id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/budget-control/api/v1/receipt/{year}/{month}": {
+            "get": {
+                "description": "Find all receipts by Period",
+                "tags": [
+                    "Receipts"
+                ],
+                "summary": "Find all receipts by Period",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Year",
+                        "name": "year",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Month",
+                        "name": "month",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.ReceiptResponse"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/budget-control/api/v1/user": {
+            "post": {
+                "description": "create a new user",
+                "tags": [
+                    "User"
+                ],
+                "parameters": [
+                    {
+                        "description": "User",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.UserRequest"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "model.BalanceSumaryResponse": {
+            "type": "object",
+            "properties": {
+                "categoryBalance": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "number"
+                    }
+                },
+                "monthBalance": {
+                    "type": "number"
+                },
+                "totalExpense": {
+                    "type": "number"
+                },
+                "totalReceipt": {
+                    "type": "number"
+                }
+            }
+        },
+        "model.ExpenseRequest": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "number"
+                }
+            }
+        },
+        "model.ExpenseResponse": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "userId": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "number"
+                }
+            }
+        },
+        "model.ReceiptRequest": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "number"
+                }
+            }
+        },
+        "model.ReceiptResponse": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "userId": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "number"
+                }
+            }
+        },
+        "model.UserRequest": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

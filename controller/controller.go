@@ -10,10 +10,22 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// Health Check
+// @Description return server status
+// @Tags Health
+// @Success 200
+// @Failure 404
+// @Router /budget-control/api/v1/health [get]
 func Health(w http.ResponseWriter, r *http.Request) {
 	utils.HandleResponse(w, http.StatusOK, struct{ Online bool }{true})
 }
 
+// Create User
+// @Description create a new user
+// @Tags User
+// @Param user body model.UserRequest true "User"
+// @Success 201 {object} model.UserRequest
+// @Router /budget-control/api/v1/user [post]
 func CreateUser(w http.ResponseWriter, r *http.Request) {
 	var user model.UserRequest
 	json.NewDecoder(r.Body).Decode(&user)
@@ -25,6 +37,12 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Authenticate
+// @Description authenticate user
+// @Tags User
+// @Param user body model.UserRequest true "User"
+// @Success 201 {string} string "token"
+// @Router /budget-control/api/v1/authenticate [post]
 func Authenticate(w http.ResponseWriter, r *http.Request) {
 	var user model.UserRequest
 	json.NewDecoder(r.Body).Decode(&user)
@@ -36,6 +54,13 @@ func Authenticate(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Month Balance Sumary
+// @Description get month balance sumary
+// @Tags Balance
+// @Param year path string true "Year"
+// @Param month path string true "Month"
+// @Success 200 {object} model.BalanceSumaryResponse
+// @Router /budget-control/api/v1/balance/{year}/{month} [get]
 func MonthBalanceSumary(w http.ResponseWriter, r *http.Request) {
 	userId := utils.UserIdFromContext(r.Context())
 	vars := mux.Vars(r)
