@@ -20,7 +20,7 @@ import (
 
 func HandleRequests() {
 	srvPort := fmt.Sprintf(":%s", os.Getenv("SRV_PORT"))
-	host := fmt.Sprintf("http://%s", os.Getenv("SRV_HOST"))
+	host := os.Getenv("SRV_HOST")
 
 	router := mux.NewRouter()
 	router.Use(middleware)
