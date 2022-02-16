@@ -18,8 +18,8 @@ jobs:
     - name: Deploy to EB
       uses: einaregilsson/beanstalk-deploy@v20
       with:
-        aws_access_key: AKIATWRRMI6I55ZXA3ZU
-        aws_secret_key: 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
+        aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         application_name: alura-challenge-backend-2nd-edition
         environment_name:  Alurachallengebackend2ndedition-env
         version_label: alura-challenge-backend-2nd-edition-source-6
