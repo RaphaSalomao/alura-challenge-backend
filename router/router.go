@@ -20,7 +20,7 @@ import (
 
 func HandleRequests() {
 	srvPort := fmt.Sprintf(":%s", os.Getenv("SRV_PORT"))
-	host := fmt.Sprintf("http://%s", os.Getenv("SRV_HOST"))
+	host := os.Getenv("SRV_HOST")
 
 	router := mux.NewRouter()
 	router.Use(middleware)
@@ -30,7 +30,7 @@ func HandleRequests() {
 	router.HandleFunc("/budget-control/api/v1/authenticate", controller.Authenticate).Methods("POST")
 
 	router.PathPrefix("/swagger/").Handler(httpSwagger.Handler(
-		httpSwagger.URL(fmt.Sprintf("%s%s/swagger/doc.json", host, srvPort)), //The url pointing to API definition
+		httpSwagger.URL(fmt.Sprintf("%s/swagger/doc.json", host)), //The url pointing to API definition
 		httpSwagger.DeepLinking(true),
 		httpSwagger.DocExpansion("none"),
 		httpSwagger.DomID("#swagger-ui"),
