@@ -5,7 +5,7 @@
         "contact": {},
         "version": "1.0.1"
     },
-    "host": "localhost",
+    "host": "alurachallengebackend2ndedition-env.eba-cmaxmrtx.us-east-2.elasticbeanstalk.com",
     "basePath": "/",
     "paths": {
         "/budget-control/api/v1/authenticate": {

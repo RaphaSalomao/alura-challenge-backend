@@ -552,7 +552,7 @@ const docTemplate_swagger = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0.1",
-	Host:             "localhost",
+	Host:             "alurachallengebackend2ndedition-env.eba-cmaxmrtx.us-east-2.elasticbeanstalk.com",
 	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "Alura Backend Challenge 2nd Edition API",
