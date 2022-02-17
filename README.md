@@ -23,11 +23,6 @@ Clone the project
 git clone git@github.com:RaphaSalomao/alura-challenge-backend.git
 ```
 
-Change the `@host` at application.go
-```Golang
-// @host      localhost
-```
-
 Run postgres docker container
 
 ```bash
