@@ -22,7 +22,7 @@ jobs:
       run: ./swag init -g application.go
 
     - name: Generate deployment package
-      run: zip -r deploy.zip . -x '*.git*'
+      run: zip -r deploy.zip . -x '*.git*' -x '.env'
 
     - name: Deploy to EB
       uses: einaregilsson/beanstalk-deploy@v20
@@ -31,7 +31,7 @@ jobs:
         aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         application_name: alura-challenge-backend-2nd-edition
         environment_name:  Alurachallengebackend2ndedition-env
-        version_label: alura-challenge-backend-2nd-edition-source-11
+        version_label: alura-challenge-backend-2nd-edition-source-12
         region: us-east-2
         deployment_package: deploy.zip
         use_existing_version_if_available: true

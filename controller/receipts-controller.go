@@ -13,7 +13,7 @@ import (
 
 // Create Receipt
 // @Summary Create a new receipt
-// @Description Create a new receipt
+// @Description Create a new receipt. Obs.: you cannot create two receipts with the same description in a single month.
 // @Tags Receipts
 // @Param receipt body model.ReceiptRequest true "Receipt"
 // @Success 201 {object} uuid.UUID

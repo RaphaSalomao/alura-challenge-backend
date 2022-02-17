@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/RaphaSalomao/alura-challenge-backend/database"
 	"github.com/RaphaSalomao/alura-challenge-backend/router"
+	"github.com/joho/godotenv"
 )
 
 // @title     Alura Backend Challenge 2nd Edition API
@@ -12,7 +14,11 @@ import (
 // @host      http://alurachallengebackend2ndedition-env.eba-cmaxmrtx.us-east-2.elasticbeanstalk.com
 // @BasePath  /
 func main() {
-	err := database.Connect()
+	err := godotenv.Load()
+	if err != nil && strings.Contains(err.Error(), "no such file or directory") {
+		fmt.Println("Error loading .env file, using default environment variables")
+	}
+	err = database.Connect()
 	if err != nil {
 		panic(err)
 	}
