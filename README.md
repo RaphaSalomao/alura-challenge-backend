@@ -1,6 +1,6 @@
 # Alura-Challenge-Backend-2nd-Edition
 
-This project is a challenge proposed by [Alura](https://www.alura.com.br/), which is the largest Brazilian platform for technology courses, where I've created a budget controll REST API using Golang.
+This project is a challenge proposed by [Alura](https://www.alura.com.br/), which is the largest Brazilian platform for technology courses, where I've created a budget controll REST API using Golang. It also has unit and integration tests and two github actions, one that build and test the application when a pull request is created pointing to branch master and another that deployes the application on AWS Elastic Beanstalk when it does push to master 
 
 This API allows you to create, read, update and delete yours month receipts and expenses. You can also retrieve a month balance of your budget.
 
