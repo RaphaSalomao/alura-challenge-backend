@@ -22,7 +22,7 @@ jobs:
       run: ./swag init -g application.go
 
     - name: Generate deployment package
-      run: zip -r deploy.zip . -x '*.git*'
+      run: zip -r deploy.zip . -x '*.git*' -x '.env'
 
     - name: Deploy to EB
       uses: einaregilsson/beanstalk-deploy@v20

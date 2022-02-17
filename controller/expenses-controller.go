@@ -13,7 +13,7 @@ import (
 
 // Create Expense
 // @Summary Create a new expense
-// @Description Create a new expense
+// @Description Create a new expense. Obs.: you cannot create two expenses with the same description in a single month.
 // @Tags Expenses
 // @Param expense body model.ExpenseRequest true "Expense"
 // @Success 201 {object} uuid.UUID
